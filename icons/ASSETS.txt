@@ -1,0 +1,8 @@
+Original ASUS artwork for personal use on this ASUS laptop.
+Source: C:\ProgramData\ASUS\ASUS System Control Interface\AsusOptimization\ASUS Keyboard Hotkeys\ATKOSD2Help.dll
+Signature verified: Valid (2026-10-18).
+Resources: type 4K, language 1033, PNG bytes copied unchanged.
+Silent.png: THROTTLEGEAR_SILENT6
+Performance.png: THROTTLEGEAR_DEFAULT6
+Turbo.png: THROTTLEGEAR_TURBO6
+Build.ps1 converts these PNGs to muted gray multi-size ICO files.

@@ -1,0 +1,44 @@
+<Jobs>
+  <ApplicationJob xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Guid="e172c5c8-606e-423b-b046-aadf1f93c588">
+    <WebsiteUrl />
+    <UserAgent />
+    <UserNotes>Local installer for ASUS ROG Zephyrus M16 GU604VZ. Run after Armoury Crate and ASUS System Control Interface are installed and the Game Library context menu is enabled. Installs Silent/Performance/Turbo menu entries and Ctrl+Alt+S/P/T. Automatic downloads are disabled. Keep the complete Armory Crate\Mode folder when moving the Software library. Setup logs its result in %LOCALAPPDATA%\ASUS Mode Shortcuts\setup-result.txt.</UserNotes>
+    <LastFileSize>0</LastFileSize>
+    <LastFileDate xsi:nil="true" />
+    <IgnoreFileInformation>false</IgnoreFileInformation>
+    <DownloadBeta>Default</DownloadBeta>
+    <DownloadDate xsi:nil="true" />
+    <CheckForUpdatesOnly>false</CheckForUpdatesOnly>
+    <VariableChangeIndicator />
+    <HashVariable />
+    <HashType>None</HashType>
+    <CanBeShared>false</CanBeShared>
+    <ShareApplication>false</ShareApplication>
+    <ExclusiveDownload>false</ExclusiveDownload>
+    <HttpReferer />
+    <SetupInstructions>
+      <SetupInstruction xsi:type="StartProcessInstruction">
+        <EnvironmentVariables />
+        <FileName>powershell.exe</FileName>
+        <Parameters>-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{startuppath}..\_Drivers\ASUS\Armory Crate\Mode\Setup.ps1"</Parameters>
+        <WaitForExit>true</WaitForExit>
+      </SetupInstruction>
+    </SetupInstructions>
+    <Variables />
+    <ExecuteCommand />
+    <ExecutePreCommand />
+    <ExecuteCommandType>Batch</ExecuteCommandType>
+    <ExecutePreCommandType>Batch</ExecutePreCommandType>
+    <Category>_Drivers</Category>
+    <SourceType>FixedUrl</SourceType>
+    <PreviousLocation>
+    </PreviousLocation>
+    <DeletePreviousFile>false</DeletePreviousFile>
+    <Enabled>false</Enabled>
+    <FileHippoId />
+    <LastUpdated xsi:nil="true" />
+    <TargetPath>..\_Drivers\ASUS\Armory Crate\Mode\Install.cmd</TargetPath>
+    <FixedDownloadUrl />
+    <Name>ASUS\Armory Crate Mode</Name>
+  </ApplicationJob>
+</Jobs>
