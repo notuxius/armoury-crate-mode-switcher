@@ -285,7 +285,9 @@ internal static class ArmouryService {
         Endpoint();
         using (RegistryKey key = Registry.LocalMachine.OpenSubKey(ExternalKey)) {
             if (key == null) throw new InvalidOperationException("Open Armoury Crate once to initialize operating modes");
-            Value(key, "SelectedMode"); Value(key, "EnabledModes"); Value(key, "IsLocked");
+            Value(key, "SelectedMode"); Value(key, "IsLocked");
+            if ((Value(key, "EnabledModes") & (2 | 4 | 8)) == 0)
+                throw new InvalidOperationException("Armoury Crate does not expose compatible Silent, Performance or Turbo modes on this computer");
         }
     }
     internal static string CurrentMode(bool validateEndpoint = true) {

@@ -2,7 +2,7 @@
 
 Switch directly between Silent, Performance, and Turbo using keyboard shortcuts or the existing ArmouryCrate desktop context menu. Requests go through Armoury Crate's service so its operating-mode selection stays in sync.
 
-**Verified on the ASUS ROG Zephyrus M16 GU604VZ. The installer currently refuses other models.** This is an unofficial utility and uses an undocumented ASUS interface, which may change with ASUS updates.
+**For ASUS laptops whose Armoury Crate service exposes compatible operating modes.** Setup checks the ASUS manufacturer, 64-bit Windows, the running service and session endpoint, and published mode capabilities instead of requiring an exact model. Tested on the ROG Zephyrus M16 GU604VZ; other models have not yet been independently tested. This is an unofficial utility and uses an undocumented ASUS interface, which may change with ASUS updates.
 
 ## Features
 
@@ -23,7 +23,7 @@ Switch directly between Silent, Performance, and Turbo using keyboard shortcuts 
 
 ## Requirements
 
-- 64-bit Windows on an ASUS ROG Zephyrus M16 GU604VZ.
+- 64-bit Windows on an ASUS computer with the compatible Armoury Crate operating-mode interface.
 - ASUS System Control Interface, Armoury Crate, and their service/hotkey components installed and initialized.
 - Armoury Crate's Game Library desktop context menu enabled.
 - ASUS Optimization / AsusOSD enabled for the original popup.

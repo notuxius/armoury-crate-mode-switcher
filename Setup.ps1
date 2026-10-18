@@ -24,8 +24,8 @@ try {
     }
 
     $asusComputer = Get-CimInstance Win32_ComputerSystem
-    if ($asusComputer.Manufacturer -notmatch 'ASUS' -or $asusComputer.Model -notmatch 'GU604VZ') {
-        throw 'This package is verified only for ASUS ROG Zephyrus M16 GU604VZ. It must be reviewed for a different model.'
+    if (-not [Environment]::Is64BitOperatingSystem -or $asusComputer.Manufacturer -notmatch 'ASUS|ASUSTeK') {
+        throw 'This package requires 64-bit Windows on an ASUS computer with compatible Armoury Crate operating modes.'
     }
     $asusBuildScript = Join-Path $PSScriptRoot 'Build.ps1'
     if (-not (Test-Path -LiteralPath $asusBuildScript)) { throw 'Extract the complete ZIP before running Install.cmd.' }
@@ -33,7 +33,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Could not build the windowless mode helper.' }
     $asusSourceExe = Join-Path $PSScriptRoot 'AsusMode.exe'
     $asusServiceCheck = Start-Process -FilePath $asusSourceExe -ArgumentList '--check' -Wait -PassThru -WindowStyle Hidden
-    if ($asusServiceCheck.ExitCode -ne 0) { throw 'Start the Armoury Crate service and open Armoury Crate once to initialize operating modes, then rerun setup.' }
+    if ($asusServiceCheck.ExitCode -ne 0) { throw 'A compatible Armoury Crate operating-mode service is required. Start the service and open Armoury Crate once, then rerun setup. See last-result.txt for the compatibility check result.' }
     $asusWscript = Join-Path $env:SystemRoot 'System32\wscript.exe'
 
     $asusSupportDir = Join-Path $env:ProgramData 'ASUS Mode Shortcuts'

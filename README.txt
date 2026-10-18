@@ -1,6 +1,7 @@
 ﻿ASUS MODE SHORTCUTS - ARMOURY CRATE SERVICE EDITION
 
-Verified laptop: ASUS ROG Zephyrus M16 GU604VZ, Windows.
+For ASUS laptops with compatible Armoury Crate operating-mode services.
+Tested on ASUS ROG Zephyrus M16 GU604VZ; other models are not independently tested.
 
 DAILY USE
 Right-click an empty area of the desktop, choose Show more options if shown,
@@ -92,8 +93,11 @@ INSTALLATION AND WINDOWS REINSTALL
 
 Copying only .lnk shortcuts is insufficient. Setup recreates their scheduled
 tasks and support files. The extracted folder is not required after installation.
-This package checks for GU604VZ and stops on other models. It is not a universal
-fan controller. Compatibility must be reviewed for another ASUS model.
+Setup checks for ASUS hardware, 64-bit Windows, the running Armoury Crate
+service/session endpoint and published operating-mode capabilities. It does not
+require an exact model. This is not a universal fan controller: incompatible
+service interfaces are rejected, and unavailable modes are rejected per request.
+The ASUS OSD is optional at runtime and may differ across ASUS software versions.
 
 For installation without the position dialog, use Setup.ps1 -MenuPosition Top
 or Setup.ps1 -MenuPosition Bottom. Install.cmd accepts the same argument.
