@@ -27,13 +27,31 @@ Assert-PackagePath $previous
 Assert-PackagePath $stage
 New-Item -ItemType Directory -Path $stage | Out-Null
 try {
-    $zip = [IO.Compression.ZipFile]::OpenRead($archive)
+    $expectedCommit = $app.Variables['version'].CachedContent
+    if ($expectedCommit -notmatch '^[0-9a-f]{40}$') { throw 'Ketarin did not resolve a valid GitHub commit.' }
+    $activeArchive = $archive
+    $probe = [IO.Compression.ZipFile]::OpenRead($archive)
+    try {
+        $downloadRoot = @($probe.Entries | ForEach-Object { ($_.FullName -split '/')[0] } | Select-Object -Unique)
+    } finally { $probe.Dispose() }
+    if ($downloadRoot.Count -ne 1 -or $downloadRoot[0] -ne ('armoury-crate-mode-switcher-' + $expectedCommit)) {
+        # Ketarin may resolve the download URL before refreshing its version indicator.
+        # Fetch the exact detected commit if main changed between those two requests.
+        $activeArchive = Join-Path $stage 'detected-commit.zip'
+        $client = New-Object Net.WebClient
+        try {
+            $client.Headers['User-Agent'] = 'ArmouryCrateModeSwitcher-Ketarin'
+            $client.DownloadFile(('https://codeload.github.com/notuxius/armoury-crate-mode-switcher/zip/' + $expectedCommit), $activeArchive)
+        } finally { $client.Dispose() }
+    }
+    $zip = [IO.Compression.ZipFile]::OpenRead($activeArchive)
     try {
         $roots = @($zip.Entries | ForEach-Object { ($_.FullName -split '/')[0] } | Select-Object -Unique)
         if ($roots.Count -ne 1 -or $roots[0] -notmatch '^armoury-crate-mode-switcher-([0-9a-f]{40})$') {
             throw 'The download is not a commit archive from armoury-crate-mode-switcher.'
         }
         $commit = $Matches[1]
+        if ($commit -ne $expectedCommit) { throw 'The downloaded archive does not match the detected GitHub commit.' }
         $stagePrefix = $stage.TrimEnd('\') + '\'
         foreach ($entry in $zip.Entries) {
             $entryPath = [IO.Path]::GetFullPath((Join-Path $stage $entry.FullName))
@@ -43,7 +61,7 @@ try {
             }
         }
     } finally { $zip.Dispose() }
-    [IO.Compression.ZipFile]::ExtractToDirectory($archive, $stage)
+    [IO.Compression.ZipFile]::ExtractToDirectory($activeArchive, $stage)
     $source = Join-Path $stage $roots[0]
     foreach ($required in @('Setup.ps1','Build.ps1','AsusMode.cs','app.manifest','InstallerMenu.ps1','InstallerRadio.ps1','asus-mode-radio.nss','icons\Silent.png','icons\Performance.png','icons\Turbo.png')) {
         if (-not (Test-Path -LiteralPath (Join-Path $source $required) -PathType Leaf)) {
@@ -51,6 +69,7 @@ try {
         }
     }
     [IO.File]::WriteAllText((Join-Path $source 'package.commit'), $commit)
+    if ($activeArchive -ne $archive) { Copy-Item -LiteralPath $activeArchive -Destination $archive -Force }
     if (Test-Path -LiteralPath $previous) {
         Assert-PackagePath $previous
         Remove-Item -LiteralPath $previous -Recurse -Force
