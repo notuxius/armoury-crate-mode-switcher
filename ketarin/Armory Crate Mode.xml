@@ -1,15 +1,16 @@
-<Jobs>
-  <ApplicationJob xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Guid="e172c5c8-606e-423b-b046-aadf1f93c588">
-    <WebsiteUrl />
-    <UserAgent />
-    <UserNotes>Local installer for ASUS ROG Zephyrus M16 GU604VZ. Run after Armoury Crate and ASUS System Control Interface are installed and the Game Library context menu is enabled. Installs Silent/Performance/Turbo menu entries and Ctrl+Alt+S/P/T. Automatic downloads are disabled. Keep the complete Armory Crate\Mode folder when moving the Software library. Setup logs its result in %LOCALAPPDATA%\ASUS Mode Shortcuts\setup-result.txt.</UserNotes>
+<?xml version='1.0' encoding='utf-8'?>
+<Jobs xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <ApplicationJob Guid="e172c5c8-606e-423b-b046-aadf1f93c588">
+    <WebsiteUrl>https://github.com/notuxius/armoury-crate-mode-switcher</WebsiteUrl>
+    <UserAgent>ArmouryCrateModeSwitcher-Ketarin</UserAgent>
+    <UserNotes>Downloads new main-branch commits from GitHub and extracts them to Package. Update downloads only; choose Install to apply the downloaded version. Supports ASUS computers whose Armoury Crate service exposes compatible operating modes; no exact model restriction. ASUS services and the Game Library context menu are required. Setup offers Top/Bottom placement.</UserNotes>
     <LastFileSize>0</LastFileSize>
     <LastFileDate xsi:nil="true" />
-    <IgnoreFileInformation>false</IgnoreFileInformation>
+    <IgnoreFileInformation>true</IgnoreFileInformation>
     <DownloadBeta>Default</DownloadBeta>
     <DownloadDate xsi:nil="true" />
     <CheckForUpdatesOnly>false</CheckForUpdatesOnly>
-    <VariableChangeIndicator />
+    <VariableChangeIndicator>version</VariableChangeIndicator>
     <HashVariable />
     <HashType>None</HashType>
     <CanBeShared>false</CanBeShared>
@@ -20,25 +21,115 @@
       <SetupInstruction xsi:type="StartProcessInstruction">
         <EnvironmentVariables />
         <FileName>powershell.exe</FileName>
-        <Parameters>-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{startuppath}..\_Drivers\ASUS\Armory Crate\Mode\Setup.ps1"</Parameters>
+        <Parameters>-NoProfile -NonInteractive -STA -ExecutionPolicy Bypass -File "{file:directory}\Package\Setup.ps1"</Parameters>
         <WaitForExit>true</WaitForExit>
       </SetupInstruction>
     </SetupInstructions>
-    <Variables />
-    <ExecuteCommand />
+    <Variables>
+      <item>
+        <key>
+          <string>version</string>
+        </key>
+        <value>
+          <UrlVariable>
+            <RegexRightToLeft>false</RegexRightToLeft>
+            <VariableType>RegularExpression</VariableType>
+            <Regex>"sha"\s*:\s*"([0-9a-f]{40})"</Regex>
+            <Url>https://api.github.com/repos/notuxius/armoury-crate-mode-switcher/commits/main</Url>
+            <Name>version</Name>
+          </UrlVariable>
+        </value>
+      </item>
+    </Variables>
+    <ExecuteCommand># Ketarin runs this as its PowerShell post-download command, with $app provided.
+# Extraction only: installing remains a separate Ketarin action.
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
+$archive = [IO.Path]::GetFullPath($app.PreviousLocation)
+$folder = [IO.Path]::GetDirectoryName($archive)
+$destination = Join-Path $folder 'Package'
+$previous = Join-Path $folder 'Package.previous'
+$stage = Join-Path $folder ('extract-' + [Guid]::NewGuid().ToString('N'))
+
+function Assert-PackagePath([string]$Path) {
+    $full = [IO.Path]::GetFullPath($Path)
+    if ([IO.Path]::GetDirectoryName($full) -ne $folder -or
+        [IO.Path]::GetFileName($full) -notmatch '^(Package(\.previous)?|extract-[0-9a-f]{32})$') {
+        throw 'Refusing to modify a path outside the package download folder.'
+    }
+    if (Test-Path -LiteralPath $full) {
+        $items = @(Get-Item -LiteralPath $full) + @(Get-ChildItem -LiteralPath $full -Recurse -Force)
+        if ($items | Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }) {
+            throw 'The package folder must not contain a symbolic link or junction.'
+        }
+    }
+}
+
+Assert-PackagePath $destination
+Assert-PackagePath $previous
+Assert-PackagePath $stage
+New-Item -ItemType Directory -Path $stage | Out-Null
+try {
+    $zip = [IO.Compression.ZipFile]::OpenRead($archive)
+    try {
+        $roots = @($zip.Entries | ForEach-Object { ($_.FullName -split '/')[0] } | Select-Object -Unique)
+        if ($roots.Count -ne 1 -or $roots[0] -notmatch '^armoury-crate-mode-switcher-([0-9a-f]{40})$') {
+            throw 'The download is not a commit archive from armoury-crate-mode-switcher.'
+        }
+        $commit = $Matches[1]
+        $stagePrefix = $stage.TrimEnd('\') + '\'
+        foreach ($entry in $zip.Entries) {
+            $entryPath = [IO.Path]::GetFullPath((Join-Path $stage $entry.FullName))
+            if (-not $entryPath.StartsWith($stagePrefix, [StringComparison]::OrdinalIgnoreCase) -or
+                $entry.FullName.Contains(':') -or $entry.FullName.Contains('\')) {
+                throw 'The archive contains an invalid file path.'
+            }
+        }
+    } finally { $zip.Dispose() }
+    [IO.Compression.ZipFile]::ExtractToDirectory($archive, $stage)
+    $source = Join-Path $stage $roots[0]
+    foreach ($required in @('Setup.ps1','Build.ps1','AsusMode.cs','app.manifest','InstallerMenu.ps1','InstallerRadio.ps1','asus-mode-radio.nss','icons\Silent.png','icons\Performance.png','icons\Turbo.png')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $source $required) -PathType Leaf)) {
+            throw ('The package is incomplete: ' + $required)
+        }
+    }
+    [IO.File]::WriteAllText((Join-Path $source 'package.commit'), $commit)
+    if (Test-Path -LiteralPath $previous) {
+        Assert-PackagePath $previous
+        Remove-Item -LiteralPath $previous -Recurse -Force
+    }
+    if (Test-Path -LiteralPath $destination) {
+        Assert-PackagePath $destination
+        Move-Item -LiteralPath $destination -Destination $previous
+    }
+    try { Move-Item -LiteralPath $source -Destination $destination }
+    catch {
+        if ((Test-Path -LiteralPath $previous) -and -not (Test-Path -LiteralPath $destination)) {
+            Assert-PackagePath $previous
+            Move-Item -LiteralPath $previous -Destination $destination
+        }
+        throw
+    }
+    Write-Output ('Downloaded package ' + $commit + '. Choose Install in Ketarin to apply it.')
+} finally {
+    if (Test-Path -LiteralPath $stage) {
+        Assert-PackagePath $stage
+        Remove-Item -LiteralPath $stage -Recurse -Force
+    }
+}
+</ExecuteCommand>
     <ExecutePreCommand />
-    <ExecuteCommandType>Batch</ExecuteCommandType>
+    <ExecuteCommandType>PowerShell</ExecuteCommandType>
     <ExecutePreCommandType>Batch</ExecutePreCommandType>
     <Category>_Drivers</Category>
     <SourceType>FixedUrl</SourceType>
-    <PreviousLocation>
-    </PreviousLocation>
+    <PreviousLocation />
     <DeletePreviousFile>false</DeletePreviousFile>
-    <Enabled>false</Enabled>
+    <Enabled>true</Enabled>
     <FileHippoId />
     <LastUpdated xsi:nil="true" />
-    <TargetPath>..\_Drivers\ASUS\Armory Crate\Mode\Install.cmd</TargetPath>
-    <FixedDownloadUrl />
+    <TargetPath>..\_Drivers\ASUS\Armory Crate\Mode\_.zip</TargetPath>
+    <FixedDownloadUrl>https://codeload.github.com/notuxius/armoury-crate-mode-switcher/zip/{version}</FixedDownloadUrl>
     <Name>ASUS\Armory Crate Mode</Name>
   </ApplicationJob>
 </Jobs>
