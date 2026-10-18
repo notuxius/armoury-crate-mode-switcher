@@ -6,7 +6,7 @@
     <UserNotes>Downloads new main-branch commits from GitHub and extracts them to Package. Update downloads only; choose Install to apply the downloaded version. Supports ASUS computers whose Armoury Crate service exposes compatible operating modes; no exact model restriction. ASUS services and the Game Library context menu are required. Setup offers Top/Bottom placement.</UserNotes>
     <LastFileSize>0</LastFileSize>
     <LastFileDate xsi:nil="true" />
-    <IgnoreFileInformation>true</IgnoreFileInformation>
+    <IgnoreFileInformation>false</IgnoreFileInformation>
     <DownloadBeta>Default</DownloadBeta>
     <DownloadDate xsi:nil="true" />
     <CheckForUpdatesOnly>false</CheckForUpdatesOnly>
