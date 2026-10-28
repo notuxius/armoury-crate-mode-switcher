@@ -1,12 +1,12 @@
-function Get-AsusModeMenuCommands {
-    param([string]$ExistingCommands, [ValidateSet('Top','Bottom')][string]$Position)
-    $original = @($ExistingCommands -split ';' | Where-Object { $_ -and $_ -notlike 'ASUSModeShortcuts.*' })
+function Remove-AsusModeMenuCommands {
+    param([AllowEmptyString()][string]$ExistingCommands)
+    $modes = @('ASUSModeShortcuts.Silent','ASUSModeShortcuts.Performance','ASUSModeShortcuts.Turbo')
+    $commands = @($ExistingCommands -split ';')
+    if (-not @($commands | Where-Object { $_ -in $modes }).Count) { return $ExistingCommands }
+    $original = @($commands | Where-Object { $_ -and $_ -notin $modes })
     while ($original.Count -gt 0 -and $original[0] -eq '|') { $original = @($original | Select-Object -Skip 1) }
     while ($original.Count -gt 0 -and $original[-1] -eq '|') { $original = @($original | Select-Object -SkipLast 1) }
-    $modes = @('ASUSModeShortcuts.Silent','ASUSModeShortcuts.Performance','ASUSModeShortcuts.Turbo')
-    if ($original.Count -eq 0) { return ($modes -join ';') }
-    if ($Position -eq 'Bottom') { return (($original + @('|') + $modes) -join ';') }
-    return (($modes + @('|') + $original) -join ';')
+    return (($original -join ';') -replace '(\|;)+\|','|')
 }
 
 function Show-AsusModeMenuPosition {
@@ -43,16 +43,16 @@ public class AsusModeSetupDialog : Form {
         $form.MinimizeBox = $false
         $form.TopMost = $true
         $label = New-Object Windows.Forms.Label
-        $label.Text = "Where should Silent, Performance and Turbo appear`r`ninside the ArmouryCrate right-click submenu?"
+        $label.Text = "Where should the Armoury Crate Modes submenu`r`nappear on the desktop right-click menu?"
         $label.Location = New-Object Drawing.Point(20,18)
         $label.Size = New-Object Drawing.Size(450,52)
         $top = New-Object Windows.Forms.RadioButton
-        $top.Text = '&Top - above Game Library'
+        $top.Text = '&Top of the desktop menu'
         $top.Location = New-Object Drawing.Point(24,82)
         $top.Size = New-Object Drawing.Size(440,30)
         $top.TabIndex = 0
         $bottom = New-Object Windows.Forms.RadioButton
-        $bottom.Text = '&Bottom - after existing entries'
+        $bottom.Text = '&Bottom of the desktop menu'
         $bottom.Location = New-Object Drawing.Point(24,120)
         $bottom.Size = New-Object Drawing.Size(440,30)
         $bottom.TabIndex = 1

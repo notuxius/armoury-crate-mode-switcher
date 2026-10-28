@@ -5,10 +5,11 @@ Tested on ASUS ROG Zephyrus M16 GU604VZ; other models are not independently test
 
 DAILY USE
 Right-click an empty area of the desktop, choose Show more options if shown,
-then ArmouryCrate > Silent, Performance, or Turbo.
-Setup lets you place the three modes at the top (above Game Library) or at
-the bottom (after existing entries) of the ArmouryCrate submenu.
-No separate ASUS Mode menu or desktop shortcuts are created.
+then Armoury Crate Modes > Silent, Performance, or Turbo.
+Setup places this separate submenu at the top or bottom of the desktop menu.
+It works even when Armoury Crate's Game Library menu is disabled or recreated.
+No desktop shortcuts are created. Upgrading removes our three commands from
+the old Game Library integration while retaining its other entries.
 
 Ctrl+Alt+S: Silent.
 Ctrl+Alt+P: Performance.
@@ -80,7 +81,7 @@ INSTALLATION AND WINDOWS REINSTALL
 1. Keep the complete ASUS Mode Shortcuts.zip on USB or cloud storage.
 2. Install the ASUS System Control Interface driver and Armoury Crate for the
    laptop, including its service and ASUS hotkey/OSD components. Restart if asked.
-3. Open Armoury Crate once and enable its Game Library right-click menu.
+3. Open Armoury Crate once. Its Game Library right-click menu can stay disabled.
 4. Extract the whole ZIP. Sign in to the Windows administrator account that
    will use these shortcuts. Run Install.cmd and approve Windows' one-time
    setup prompt. Setup also supports updates of an existing installation.
@@ -90,7 +91,7 @@ INSTALLATION AND WINDOWS REINSTALL
    Choose Top or Bottom in the setup window, then click Install. Setup remembers
    your selection for the next installation. Cancel leaves the installed menu
    unchanged. Rerun setup whenever you want to change the position.
-5. Use the three hotkeys or ArmouryCrate submenu entries. Other applications
+5. Use the three hotkeys or Armoury Crate Modes submenu entries. Other applications
    can reserve the same keys; watcher-status.txt lists each registration result.
    The helper retries keys that are temporarily unavailable.
 
@@ -144,17 +145,13 @@ Watcher, then delete these three tasks from the
 Task Scheduler Library: ASUS Silent Mode, ASUS Performance Mode, ASUS Turbo Mode.
 Delete ASUS Mode Shortcuts from the current user's Start menu Programs folder
 and the ASUS Mode Shortcuts support folder under ProgramData.
-To remove the modes from the menu, edit SubCommands under:
-HKEY_LOCAL_MACHINE\Software\Classes\Directory\Background\shell\GameLibrary
-Remove only the three ASUSModeShortcuts.* entries and their adjacent separator
-from the start or end of SubCommands, depending on the selected placement.
-Also remove the ASUSModeShortcutsPosition value from the GameLibrary key.
-Keep the GameLibrary key and all its other original commands.
+To remove the modes submenu, delete this package-owned key:
+HKEY_CURRENT_USER\Software\Classes\DesktopBackground\Shell\ASUSModes
+It has the ASUSModeShortcuts ownership marker and title Armoury Crate Modes.
+Do not delete ASUS's GameLibrary key.
 Remove these three package command keys under
 HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell:
 ASUSModeShortcuts.Silent, ASUSModeShortcuts.Performance, ASUSModeShortcuts.Turbo.
-If an Armoury Crate update recreates its menu and removes the mode entries,
-rerun Install.cmd to merge them back without duplicating existing entries.
 No ASUS driver needs to be removed.
 If Nilesoft is installed, also remove the imports/asus-mode-radio.nss import
 from shell.nss and the package-owned asus-mode-radio.nss file, then reload it.

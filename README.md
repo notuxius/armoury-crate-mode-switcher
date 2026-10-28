@@ -1,6 +1,6 @@
-# Armoury Crate Mode Switcher
+﻿# Armoury Crate Mode Switcher
 
-Switch directly between Silent, Performance, and Turbo using keyboard shortcuts or the existing ArmouryCrate desktop context menu. Requests go through Armoury Crate's service so its operating-mode selection stays in sync.
+Switch directly between Silent, Performance, and Turbo using keyboard shortcuts or a separate **Armoury Crate Modes** desktop context menu. Requests go through Armoury Crate's service so its operating-mode selection stays in sync.
 
 **For ASUS laptops whose Armoury Crate service exposes compatible operating modes.** Setup checks the ASUS manufacturer, 64-bit Windows, the running service and session endpoint, and published mode capabilities instead of requiring an exact model. Tested on the ROG Zephyrus M16 GU604VZ; other models have not yet been independently tested. This is an unofficial utility and uses an undocumented ASUS interface, which may change with ASUS updates.
 
@@ -16,8 +16,8 @@ Switch directly between Silent, Performance, and Turbo using keyboard shortcuts 
 - A windowless background helper starts at sign-in and handles requests immediately.
 - Daily switching has no administrator prompt, confirmation dialog, or terminal window. Installation requires elevation once.
 - The original installed ASUS OSD displays successful changes.
-- Modes appear inside the existing ArmouryCrate submenu, with a top/bottom placement choice during installation.
-- No desktop shortcuts or separate ASUS Mode root menu.
+- An independent **Armoury Crate Modes** submenu stays available when Armoury Crate's Game Library menu is disabled or recreated. Setup offers Top/Bottom placement on the desktop menu.
+- No desktop shortcuts. Upgrading removes only our mode commands from the old Game Library integration, retaining its other entries.
 - With Nilesoft Shell 1.9 or later, a left-side radio dot marks the selected mode. The default Windows classic menu uses a trailing checkmark.
 - Selection follows changes made through Armoury Crate and Fn+F5. Reopen the context menu to refresh it; the classic-menu watcher checks once per second.
 
@@ -25,7 +25,6 @@ Switch directly between Silent, Performance, and Turbo using keyboard shortcuts 
 
 - 64-bit Windows on an ASUS computer with the compatible Armoury Crate operating-mode interface.
 - ASUS System Control Interface, Armoury Crate, and their service/hotkey components installed and initialized.
-- Armoury Crate's Game Library desktop context menu enabled.
 - ASUS Optimization / AsusOSD enabled for the original popup.
 - An administrator account for setup; a suitable AC adapter for Turbo mode.
 - Windows .NET Framework compiler, used by setup to build the helper locally.
@@ -34,11 +33,11 @@ The Armoury Crate app window can remain closed after initialization, but its ser
 
 ## Install
 
-1. Install the ASUS prerequisites and open Armoury Crate once. Enable its Game Library right-click menu.
+1. Install the ASUS prerequisites and open Armoury Crate once. Its Game Library right-click menu can remain disabled.
 2. Download this repository using **Code > Download ZIP**, or clone it, and extract the complete folder.
-3. Run `Install.cmd`, approve the Windows setup prompt, and choose **Top** or **Bottom** for the mode entries.
+3. Run `Install.cmd`, approve the Windows setup prompt, and choose **Top** or **Bottom** for the separate desktop submenu.
 4. If Nilesoft is installed, hold Ctrl while right-clicking the desktop once to reload its configuration.
-5. Use the hotkeys, or right-click the desktop and open **ArmouryCrate**. On the default Windows 11 menu, choose **Show more options** first.
+5. Use the hotkeys, or right-click the desktop and open **Armoury Crate Modes**. On the default Windows 11 menu, choose **Show more options** first.
 
 To select placement without the setup selection window:
 
@@ -71,7 +70,7 @@ Logs are stored under `%LOCALAPPDATA%\ASUS Mode Shortcuts`:
 - `last-result.txt`: latest mode request and confirmation.
 - `watcher-status.txt`: background listener and hotkey registration status.
 
-Other applications can reserve the same keyboard shortcuts. The helper retries unavailable hotkeys. If an Armoury Crate update recreates its menu, rerun setup to restore the mode entries.
+Other applications can reserve the same keyboard shortcuts. The helper retries unavailable hotkeys. The separate modes menu does not depend on ASUS maintaining its Game Library menu registration.
 
 Support files are installed under `%ProgramData%\ASUS Mode Shortcuts`. Full implementation notes, diagnostic commands, and removal instructions are in [README.txt](README.txt).
 

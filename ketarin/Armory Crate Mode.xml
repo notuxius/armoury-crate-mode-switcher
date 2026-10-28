@@ -3,7 +3,7 @@
   <ApplicationJob Guid="e172c5c8-606e-423b-b046-aadf1f93c588">
     <WebsiteUrl>https://github.com/notuxius/armoury-crate-mode-switcher</WebsiteUrl>
     <UserAgent>ArmouryCrateModeSwitcher-Ketarin</UserAgent>
-    <UserNotes>Downloads new main-branch commits from GitHub and extracts them to Package. Update downloads only; choose Install to apply the downloaded version. Supports ASUS computers whose Armoury Crate service exposes compatible operating modes; no exact model restriction. ASUS services and the Game Library context menu are required. Setup offers Top/Bottom placement.</UserNotes>
+    <UserNotes>Downloads new main-branch commits from GitHub and extracts them to Package. Update downloads only; choose Install to apply the downloaded version. Supports ASUS computers whose Armoury Crate service exposes compatible operating modes; no exact model restriction. ASUS services are required. The separate Armoury Crate Modes desktop menu works with Game Library disabled. Setup offers Top/Bottom desktop placement.</UserNotes>
     <LastFileSize>0</LastFileSize>
     <LastFileDate xsi:nil="true" />
     <IgnoreFileInformation>false</IgnoreFileInformation>

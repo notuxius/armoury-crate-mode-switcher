@@ -50,19 +50,7 @@ try {
     $asusMenuRoot = 'HKCU:\Software\Classes\DesktopBackground\Shell\ASUSModes'
     $asusArmouryUserMenu = 'HKCU:\Software\Classes\Directory\Background\shell\GameLibrary'
     $asusArmouryMenu = 'HKLM:\Software\Classes\Directory\Background\shell\GameLibrary'
-    $asusArmourySource = $asusArmouryMenu
     $asusCommandStore = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell'
-    if (-not (Test-Path -LiteralPath $asusArmourySource)) {
-        throw 'Enable the ArmouryCrate Game Library right-click menu first, then rerun setup. This package adds modes to that existing menu.'
-    }
-    $asusArmouryValues = Get-ItemProperty -LiteralPath $asusArmourySource
-    if ($asusArmouryValues.MUIVerb -ne 'ArmouryCrate' -or -not $asusArmouryValues.SubCommands) {
-        throw 'The existing ArmouryCrate menu uses an unrecognized format. Its entries have not been changed.'
-    }
-    if ((Test-Path -LiteralPath $asusArmouryUserMenu) -and
-        (Get-ItemProperty -LiteralPath $asusArmouryUserMenu -Name ASUSModeShortcuts -ErrorAction SilentlyContinue).ASUSModeShortcuts -ne '1') {
-        throw 'An existing user-specific ArmouryCrate menu must be reviewed before merging.'
-    }
     if ((Test-Path -LiteralPath $asusMenuRoot) -and
         (Get-ItemProperty -LiteralPath $asusMenuRoot -Name ASUSModeShortcuts -ErrorAction SilentlyContinue).ASUSModeShortcuts -ne '1') {
         throw 'An unrelated ASUSModes desktop menu already exists. Nothing has been replaced.'
@@ -72,10 +60,11 @@ try {
     $asusRadioConfig = Get-AsusRadioConfig
     if (-not $MenuPosition) {
         $asusPreviousPosition = 'Top'
-        if ($asusArmouryValues.ASUSModeShortcutsPosition -in @('Top','Bottom')) {
-            $asusPreviousPosition = $asusArmouryValues.ASUSModeShortcutsPosition
-        } elseif ($asusArmouryValues.SubCommands -match ';ASUSModeShortcuts\.Turbo$') {
-            $asusPreviousPosition = 'Bottom'
+        foreach ($asusPositionKey in @($asusArmouryMenu, $asusMenuRoot)) {
+            if (Test-Path -LiteralPath $asusPositionKey) {
+                $asusSavedPosition = (Get-ItemProperty -LiteralPath $asusPositionKey -Name ASUSModeShortcutsPosition -ErrorAction SilentlyContinue).ASUSModeShortcutsPosition
+                if ($asusSavedPosition -in @('Top','Bottom')) { $asusPreviousPosition = $asusSavedPosition }
+            }
         }
         $asusChosenPosition = Show-AsusModeMenuPosition -DefaultPosition $asusPreviousPosition
         if (-not $asusChosenPosition) {
@@ -166,10 +155,6 @@ try {
     if (-not (Test-Path -LiteralPath $asusStartFolder)) {
         New-Item -ItemType Directory -Path $asusStartFolder | Out-Null
     }
-    # Extend ASUS's own menu registration, retaining all its original commands.
-    # Reinstalling replaces our entries instead of accumulating duplicates.
-    $asusMergedCommands = Get-AsusModeMenuCommands -ExistingCommands $asusArmouryValues.SubCommands -Position $MenuPosition
-
     $asusPrincipal = New-ScheduledTaskPrincipal -UserId $asusIdentity.Name -LogonType Interactive -RunLevel Highest
     $asusSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 1) -MultipleInstances IgnoreNew
     Add-Type -TypeDefinition @'
@@ -214,10 +199,27 @@ public static class AsusModeLinkRefresh {
             [AsusModeLinkRefresh]::SHChangeNotify(0x00000004, 0x0005, $asusOldDesktopLink, [IntPtr]::Zero)
         }
     }
-    New-ItemProperty -LiteralPath $asusArmouryMenu -Name SubCommands -Value $asusMergedCommands -PropertyType String -Force | Out-Null
-    New-ItemProperty -LiteralPath $asusArmouryMenu -Name ASUSModeShortcutsPosition -Value $MenuPosition -PropertyType String -Force | Out-Null
-    if (Test-Path -LiteralPath $asusArmouryUserMenu) { Remove-Item -LiteralPath $asusArmouryUserMenu -Recurse }
-    if (Test-Path -LiteralPath $asusMenuRoot) { Remove-Item -LiteralPath $asusMenuRoot -Recurse }
+    # This menu belongs to the package and does not depend on ASUS Game Library.
+    New-Item -Path $asusMenuRoot -Force | Out-Null
+    New-ItemProperty -LiteralPath $asusMenuRoot -Name ASUSModeShortcuts -Value '1' -PropertyType String -Force | Out-Null
+    New-ItemProperty -LiteralPath $asusMenuRoot -Name MUIVerb -Value 'Armoury Crate Modes' -PropertyType String -Force | Out-Null
+    New-ItemProperty -LiteralPath $asusMenuRoot -Name Icon -Value ((Join-Path $asusInstalledIcons 'Performance-menu-asus6.ico') + ',0') -PropertyType String -Force | Out-Null
+    New-ItemProperty -LiteralPath $asusMenuRoot -Name SubCommands -Value 'ASUSModeShortcuts.Silent;ASUSModeShortcuts.Performance;ASUSModeShortcuts.Turbo' -PropertyType String -Force | Out-Null
+    New-ItemProperty -LiteralPath $asusMenuRoot -Name Position -Value $MenuPosition -PropertyType String -Force | Out-Null
+    New-ItemProperty -LiteralPath $asusMenuRoot -Name ASUSModeShortcutsPosition -Value $MenuPosition -PropertyType String -Force | Out-Null
+    # Upgrade older installations without deleting or recreating ASUS's menu.
+    foreach ($asusOldMenu in @($asusArmouryMenu, $asusArmouryUserMenu)) {
+        if (-not (Test-Path -LiteralPath $asusOldMenu)) { continue }
+        $asusOldValues = Get-ItemProperty -LiteralPath $asusOldMenu
+        $asusOriginalCommands = Remove-AsusModeMenuCommands -ExistingCommands $asusOldValues.SubCommands
+        if ($asusOriginalCommands -cne [string]$asusOldValues.SubCommands) {
+            $asusBackupName = 'game-library-before-separate-menu-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '.reg'
+            & reg.exe export ((Get-Item -LiteralPath $asusOldMenu).Name) (Join-Path $asusSupportDir $asusBackupName) /y | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Could not back up the old Game Library menu.' }
+            New-ItemProperty -LiteralPath $asusOldMenu -Name SubCommands -Value $asusOriginalCommands -PropertyType String -Force | Out-Null
+        }
+        Remove-ItemProperty -LiteralPath $asusOldMenu -Name ASUSModeShortcutsPosition -ErrorAction SilentlyContinue
+    }
     $asusMenuRefresh = Start-Process -FilePath $asusHelper -ArgumentList '--refresh-menu' -Wait -PassThru -WindowStyle Hidden
     if ($asusMenuRefresh.ExitCode -ne 0) { throw 'Could not update mode checkmarks.' }
     Install-AsusRadioMenu -Config $asusRadioConfig -SourceFolder $PSScriptRoot -BackupFolder $asusSupportDir
@@ -232,7 +234,7 @@ public static class AsusModeLinkRefresh {
         if (Test-Path -LiteralPath $asusOldFilePath) { Remove-Item -LiteralPath $asusOldFilePath }
     }
     [AsusModeLinkRefresh]::SHChangeNotify(0x08000000, 0, $null, [IntPtr]::Zero)
-    Write-Output 'Ready: desktop right-click > Show more options (if shown) > ArmouryCrate > Silent / Performance / Turbo.'
+    Write-Output 'Ready: desktop right-click > Show more options (if shown) > Armoury Crate Modes > Silent / Performance / Turbo.'
     Write-Output 'Ready: Ctrl+Alt+S for Silent; Ctrl+Alt+P for Performance; Ctrl+Alt+T for Turbo.'
     Write-Output 'Mode changes now use the original ASUS hotkey popup through the installed AsusOSD component.'
     Write-Output 'The background checkmark watcher tracks Armoury Crate service selection.'

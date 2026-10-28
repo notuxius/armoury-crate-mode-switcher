@@ -4,7 +4,7 @@ if "%errorlevel%"=="2" exit /b 2
 if errorlevel 1 (
     echo Setup did not complete. See the error message above.
 ) else (
-    echo Silent, Performance and Turbo are ready inside the ArmouryCrate menu.
+    echo Silent, Performance and Turbo are ready in the separate Armoury Crate Modes menu.
     echo On Windows 11, select Show more options if needed.
     echo No desktop shortcuts are created. The background helper handles hotkeys.
     echo Silent: Ctrl+Alt+S    Performance: Ctrl+Alt+P    Turbo: Ctrl+Alt+T
