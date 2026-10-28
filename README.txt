@@ -146,7 +146,7 @@ Task Scheduler Library: ASUS Silent Mode, ASUS Performance Mode, ASUS Turbo Mode
 Delete ASUS Mode Shortcuts from the current user's Start menu Programs folder
 and the ASUS Mode Shortcuts support folder under ProgramData.
 To remove the modes submenu, delete this package-owned key:
-HKEY_CURRENT_USER\Software\Classes\DesktopBackground\Shell\ASUSModes
+HKEY_LOCAL_MACHINE\Software\Classes\Directory\Background\shell\ArmouryCrateModes
 It has the ASUSModeShortcuts ownership marker and title Armoury Crate Modes.
 Do not delete ASUS's GameLibrary key.
 Remove these three package command keys under
