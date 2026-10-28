@@ -47,20 +47,21 @@ try {
     }
     $asusDesktop = [Environment]::GetFolderPath('Desktop')
     $asusStartFolder = Join-Path ([Environment]::GetFolderPath('Programs')) 'ASUS Mode Shortcuts'
-    $asusMenuRoot = 'HKCU:\Software\Classes\DesktopBackground\Shell\ASUSModes'
+    $asusMenuRoot = 'HKLM:\Software\Classes\Directory\Background\shell\ArmouryCrateModes'
+    $asusLegacyRoot = 'HKCU:\Software\Classes\DesktopBackground\Shell\ASUSModes'
     $asusArmouryUserMenu = 'HKCU:\Software\Classes\Directory\Background\shell\GameLibrary'
     $asusArmouryMenu = 'HKLM:\Software\Classes\Directory\Background\shell\GameLibrary'
     $asusCommandStore = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell'
     if ((Test-Path -LiteralPath $asusMenuRoot) -and
         (Get-ItemProperty -LiteralPath $asusMenuRoot -Name ASUSModeShortcuts -ErrorAction SilentlyContinue).ASUSModeShortcuts -ne '1') {
-        throw 'An unrelated ASUSModes desktop menu already exists. Nothing has been replaced.'
+        throw 'An unrelated ArmouryCrateModes menu already exists. Nothing has been replaced.'
     }
     . (Join-Path $PSScriptRoot 'InstallerMenu.ps1')
     . (Join-Path $PSScriptRoot 'InstallerRadio.ps1')
     $asusRadioConfig = Get-AsusRadioConfig
     if (-not $MenuPosition) {
         $asusPreviousPosition = 'Top'
-        foreach ($asusPositionKey in @($asusArmouryMenu, $asusMenuRoot)) {
+        foreach ($asusPositionKey in @($asusArmouryMenu, $asusLegacyRoot, $asusMenuRoot)) {
             if (Test-Path -LiteralPath $asusPositionKey) {
                 $asusSavedPosition = (Get-ItemProperty -LiteralPath $asusPositionKey -Name ASUSModeShortcutsPosition -ErrorAction SilentlyContinue).ASUSModeShortcutsPosition
                 if ($asusSavedPosition -in @('Top','Bottom')) { $asusPreviousPosition = $asusSavedPosition }
@@ -207,6 +208,10 @@ public static class AsusModeLinkRefresh {
     New-ItemProperty -LiteralPath $asusMenuRoot -Name SubCommands -Value 'ASUSModeShortcuts.Silent;ASUSModeShortcuts.Performance;ASUSModeShortcuts.Turbo' -PropertyType String -Force | Out-Null
     New-ItemProperty -LiteralPath $asusMenuRoot -Name Position -Value $MenuPosition -PropertyType String -Force | Out-Null
     New-ItemProperty -LiteralPath $asusMenuRoot -Name ASUSModeShortcutsPosition -Value $MenuPosition -PropertyType String -Force | Out-Null
+    if ((Test-Path -LiteralPath $asusLegacyRoot) -and
+        (Get-ItemProperty -LiteralPath $asusLegacyRoot -Name ASUSModeShortcuts -ErrorAction SilentlyContinue).ASUSModeShortcuts -eq '1') {
+        Remove-Item -LiteralPath $asusLegacyRoot -Recurse
+    }
     # Upgrade older installations without deleting or recreating ASUS's menu.
     foreach ($asusOldMenu in @($asusArmouryMenu, $asusArmouryUserMenu)) {
         if (-not (Test-Path -LiteralPath $asusOldMenu)) { continue }
