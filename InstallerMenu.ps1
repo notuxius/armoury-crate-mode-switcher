@@ -10,7 +10,7 @@ function Remove-AsusModeMenuCommands {
 }
 
 function Show-AsusModeMenuPosition {
-    param([ValidateSet('Top','Bottom')][string]$DefaultPosition = 'Top')
+    param([ValidateSet('Auto','Top','Bottom')][string]$DefaultPosition = 'Auto')
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
     # Hidden launchers must hide the console, not this installer-owned dialog.
@@ -36,7 +36,7 @@ public class AsusModeSetupDialog : Form {
         $form.Font = New-Object Drawing.Font('Segoe UI', 10)
         $form.AutoScaleDimensions = New-Object Drawing.SizeF(96,96)
         $form.AutoScaleMode = 'Dpi'
-        $form.ClientSize = New-Object Drawing.Size(490,238)
+        $form.ClientSize = New-Object Drawing.Size(490,276)
         $form.FormBorderStyle = 'FixedDialog'
         $form.StartPosition = 'CenterScreen'
         $form.MaximizeBox = $false
@@ -46,34 +46,41 @@ public class AsusModeSetupDialog : Form {
         $label.Text = "Where should the Armoury Crate Modes submenu`r`nappear on the desktop right-click menu?"
         $label.Location = New-Object Drawing.Point(20,18)
         $label.Size = New-Object Drawing.Size(450,52)
+        $auto = New-Object Windows.Forms.RadioButton
+        $auto.Text = '&Automatic - above ArmouryCrate, or in its place'
+        $auto.Location = New-Object Drawing.Point(24,82)
+        $auto.Size = New-Object Drawing.Size(450,30)
+        $auto.TabIndex = 0
+        $auto.Checked = $DefaultPosition -eq 'Auto'
         $top = New-Object Windows.Forms.RadioButton
         $top.Text = '&Top of the desktop menu'
-        $top.Location = New-Object Drawing.Point(24,82)
+        $top.Location = New-Object Drawing.Point(24,120)
         $top.Size = New-Object Drawing.Size(440,30)
-        $top.TabIndex = 0
+        $top.TabIndex = 1
         $bottom = New-Object Windows.Forms.RadioButton
         $bottom.Text = '&Bottom of the desktop menu'
-        $bottom.Location = New-Object Drawing.Point(24,120)
+        $bottom.Location = New-Object Drawing.Point(24,158)
         $bottom.Size = New-Object Drawing.Size(440,30)
-        $bottom.TabIndex = 1
+        $bottom.TabIndex = 2
         $top.Checked = $DefaultPosition -eq 'Top'
         $bottom.Checked = $DefaultPosition -eq 'Bottom'
         $install = New-Object Windows.Forms.Button
         $install.Text = '&Install'
-        $install.Location = New-Object Drawing.Point(254,187)
+        $install.Location = New-Object Drawing.Point(254,225)
         $install.Size = New-Object Drawing.Size(100,32)
         $install.DialogResult = 'OK'
-        $install.TabIndex = 2
+        $install.TabIndex = 3
         $cancel = New-Object Windows.Forms.Button
         $cancel.Text = 'Cancel'
-        $cancel.Location = New-Object Drawing.Point(366,187)
+        $cancel.Location = New-Object Drawing.Point(366,225)
         $cancel.Size = New-Object Drawing.Size(100,32)
         $cancel.DialogResult = 'Cancel'
-        $cancel.TabIndex = 3
-        $form.Controls.AddRange(@($label,$top,$bottom,$install,$cancel))
+        $cancel.TabIndex = 4
+        $form.Controls.AddRange(@($label,$auto,$top,$bottom,$install,$cancel))
         $form.AcceptButton = $install
         $form.CancelButton = $cancel
         if ($form.ShowDialog() -ne [Windows.Forms.DialogResult]::OK) { return $null }
+        if ($auto.Checked) { return 'Auto' }
         if ($bottom.Checked) { return 'Bottom' }
         return 'Top'
     } finally { $form.Dispose() }

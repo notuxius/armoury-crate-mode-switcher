@@ -1,4 +1,4 @@
-param([ValidateSet('Top','Bottom')][string]$MenuPosition)
+param([ValidateSet('Auto','Top','Bottom')][string]$MenuPosition)
 $ErrorActionPreference = 'Stop'
 $asusPositionArgument = if ($MenuPosition) { ' -MenuPosition ' + $MenuPosition } else { '' }
 # Ketarin is 32-bit; setup must use the native Windows registry and task tools.
@@ -60,11 +60,11 @@ try {
     . (Join-Path $PSScriptRoot 'InstallerRadio.ps1')
     $asusRadioConfig = Get-AsusRadioConfig
     if (-not $MenuPosition) {
-        $asusPreviousPosition = 'Top'
+        $asusPreviousPosition = 'Auto'
         foreach ($asusPositionKey in @($asusArmouryMenu, $asusLegacyRoot, $asusMenuRoot)) {
             if (Test-Path -LiteralPath $asusPositionKey) {
                 $asusSavedPosition = (Get-ItemProperty -LiteralPath $asusPositionKey -Name ASUSModeShortcutsPosition -ErrorAction SilentlyContinue).ASUSModeShortcutsPosition
-                if ($asusSavedPosition -in @('Top','Bottom')) { $asusPreviousPosition = $asusSavedPosition }
+                if ($asusSavedPosition -in @('Auto','Top','Bottom')) { $asusPreviousPosition = $asusSavedPosition }
             }
         }
         $asusChosenPosition = Show-AsusModeMenuPosition -DefaultPosition $asusPreviousPosition
@@ -206,7 +206,11 @@ public static class AsusModeLinkRefresh {
     New-ItemProperty -LiteralPath $asusMenuRoot -Name MUIVerb -Value 'Armoury Crate Modes' -PropertyType String -Force | Out-Null
     New-ItemProperty -LiteralPath $asusMenuRoot -Name Icon -Value ((Join-Path $asusInstalledIcons 'Performance-menu-asus6.ico') + ',0') -PropertyType String -Force | Out-Null
     New-ItemProperty -LiteralPath $asusMenuRoot -Name SubCommands -Value 'ASUSModeShortcuts.Silent;ASUSModeShortcuts.Performance;ASUSModeShortcuts.Turbo' -PropertyType String -Force | Out-Null
-    New-ItemProperty -LiteralPath $asusMenuRoot -Name Position -Value $MenuPosition -PropertyType String -Force | Out-Null
+    if ($MenuPosition -eq 'Auto') {
+        Remove-ItemProperty -LiteralPath $asusMenuRoot -Name Position -ErrorAction SilentlyContinue
+    } else {
+        New-ItemProperty -LiteralPath $asusMenuRoot -Name Position -Value $MenuPosition -PropertyType String -Force | Out-Null
+    }
     New-ItemProperty -LiteralPath $asusMenuRoot -Name ASUSModeShortcutsPosition -Value $MenuPosition -PropertyType String -Force | Out-Null
     if ((Test-Path -LiteralPath $asusLegacyRoot) -and
         (Get-ItemProperty -LiteralPath $asusLegacyRoot -Name ASUSModeShortcuts -ErrorAction SilentlyContinue).ASUSModeShortcuts -eq '1') {

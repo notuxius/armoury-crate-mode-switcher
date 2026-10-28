@@ -6,7 +6,10 @@ Tested on ASUS ROG Zephyrus M16 GU604VZ; other models are not independently test
 DAILY USE
 Right-click an empty area of the desktop, choose Show more options if shown,
 then Armoury Crate Modes > Silent, Performance, or Turbo.
-Setup places this separate submenu at the top or bottom of the desktop menu.
+Setup offers Automatic, Top, or Bottom placement for this separate submenu.
+Automatic uses Nilesoft to place it immediately above ArmouryCrate. If that
+menu is hidden, it stays before Unblock or the next NVIDIA/New entry in that
+section. Without Nilesoft, Automatic uses the normal Windows menu position.
 It works even when Armoury Crate's Game Library menu is disabled or recreated.
 No desktop shortcuts are created. Upgrading removes our three commands from
 the old Game Library integration while retaining its other entries.
@@ -46,7 +49,7 @@ Setup adds one import for imports/asus-mode-radio.nss to Nilesoft's shell.nss,
 backing up the previous config in the support folder. It does not install
 Nilesoft or add the retired ASUS Mode root-menu cleanup rule.
 After installation, hold Ctrl while opening the desktop context menu once
-to reload the configuration. Top/bottom placement works with either choice.
+to reload the configuration. Automatic placement needs Nilesoft; Top/Bottom also work with Windows menus.
 Without Nilesoft, the classic menu retains its existing text checkmark.
 
 The watcher reads the mode published by the Armoury Crate service once per
@@ -88,7 +91,7 @@ INSTALLATION AND WINDOWS REINSTALL
    Alternatively, update Armory Crate Mode in Ketarin, then choose Install.
    Ketarin downloads the latest GitHub main-branch commit to _.zip and extracts
    it into Package beside the ZIP. Updates alone do not reinstall the helper.
-   Choose Top or Bottom in the setup window, then click Install. Setup remembers
+   Choose Automatic, Top, or Bottom in the setup window, then click Install. Setup remembers
    your selection for the next installation. Cancel leaves the installed menu
    unchanged. Rerun setup whenever you want to change the position.
 5. Use the three hotkeys or Armoury Crate Modes submenu entries. Other applications
@@ -103,8 +106,8 @@ require an exact model. This is not a universal fan controller: incompatible
 service interfaces are rejected, and unavailable modes are rejected per request.
 The ASUS OSD is optional at runtime and may differ across ASUS software versions.
 
-For installation without the position dialog, use Setup.ps1 -MenuPosition Top
-or Setup.ps1 -MenuPosition Bottom. Install.cmd accepts the same argument.
+For installation without the position dialog, use Setup.ps1 -MenuPosition Auto,
+Setup.ps1 -MenuPosition Top, or Setup.ps1 -MenuPosition Bottom. Install.cmd accepts the same argument.
 The one-time Windows elevation prompt may still appear during installation.
 
 IMPLEMENTATION AND DIAGNOSTICS

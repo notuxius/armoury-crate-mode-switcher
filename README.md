@@ -16,9 +16,9 @@ Switch directly between Silent, Performance, and Turbo using keyboard shortcuts 
 - A windowless background helper starts at sign-in and handles requests immediately.
 - Daily switching has no administrator prompt, confirmation dialog, or terminal window. Installation requires elevation once.
 - The original installed ASUS OSD displays successful changes.
-- An independent **Armoury Crate Modes** submenu stays available when Armoury Crate's Game Library menu is disabled or recreated. Setup offers Top/Bottom placement on the desktop menu.
+- An independent **Armoury Crate Modes** submenu stays available when Armoury Crate's Game Library menu is disabled or recreated. Setup offers Automatic, Top, or Bottom placement on the desktop menu. Automatic uses Nilesoft to place it directly above ArmouryCrate; if that menu is hidden, it stays in the same section before Unblock or the next available NVIDIA/New entry.
 - No desktop shortcuts. Upgrading removes only our mode commands from the old Game Library integration, retaining its other entries.
-- With Nilesoft Shell 1.9 or later, a left-side radio dot marks the selected mode. The default Windows classic menu uses a trailing checkmark.
+- With Nilesoft Shell 1.9 or later, a left-side radio dot marks the selected mode. The default Windows classic menu uses a trailing checkmark. Without Nilesoft, Automatic leaves positioning to Windows; exact placement relative to another menu requires Nilesoft.
 - Selection follows changes made through Armoury Crate and Fn+F5. Reopen the context menu to refresh it; the classic-menu watcher checks once per second.
 
 ## Requirements
@@ -35,13 +35,14 @@ The Armoury Crate app window can remain closed after initialization, but its ser
 
 1. Install the ASUS prerequisites and open Armoury Crate once. Its Game Library right-click menu can remain disabled.
 2. Download this repository using **Code > Download ZIP**, or clone it, and extract the complete folder.
-3. Run `Install.cmd`, approve the Windows setup prompt, and choose **Top** or **Bottom** for the separate desktop submenu.
+3. Run `Install.cmd`, approve the Windows setup prompt, and choose **Automatic**, **Top**, or **Bottom** for the separate desktop submenu.
 4. If Nilesoft is installed, hold Ctrl while right-clicking the desktop once to reload its configuration.
 5. Use the hotkeys, or right-click the desktop and open **Armoury Crate Modes**. On the default Windows 11 menu, choose **Show more options** first.
 
 To select placement without the setup selection window:
 
 ```bat
+Install.cmd -MenuPosition Auto
 Install.cmd -MenuPosition Top
 Install.cmd -MenuPosition Bottom
 ```
@@ -56,7 +57,7 @@ Run `Build.ps1` with Windows PowerShell. It compiles `AsusMode.cs` to a windowle
 
 `ketarin/Armory Crate Mode.xml` imports a GitHub updater entry. Ketarin checks the latest commit on `main` and downloads that exact commit archive when it changes. The post-download PowerShell command validates and extracts it into `Package` beside the ZIP, retaining the previous extracted package as `Package.previous`.
 
-By default downloads go to `..\_Drivers\ASUS\Armory Crate\Mode\_.zip` relative to Ketarin's startup directory. Change the target path for your layout; extraction and installation follow the downloaded ZIP location. **Update** downloads and prepares files; **Install** runs the downloaded setup and offers Top/Bottom placement. It does not change the installed helper merely because an update was downloaded. No GitHub login or token is required.
+By default downloads go to `..\_Drivers\ASUS\Armory Crate\Mode\_.zip` relative to Ketarin's startup directory. Change the target path for your layout; extraction and installation follow the downloaded ZIP location. **Update** downloads and prepares files; **Install** runs the downloaded setup and offers Automatic/Top/Bottom placement. It does not change the installed helper merely because an update was downloaded. No GitHub login or token is required.
 
 The readable post-download command is also provided as `ketarin/Extract-Package.ps1`; the XML embeds the same script so the first download works without a preinstalled bootstrap file.
 
