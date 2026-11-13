@@ -81,7 +81,8 @@ These saved menu icons do not automatically change with ASUS software updates.
 They remain ASUS artwork included in this personal setup package.
 
 INSTALLATION AND WINDOWS REINSTALL
-1. Keep the complete ASUS Mode Shortcuts.zip on USB or cloud storage.
+1. Download the installer ZIP from the GitHub releases page and keep a backup.
+   https://github.com/notuxius/armoury-crate-mode-switcher/releases/latest
 2. Install the ASUS System Control Interface driver and Armoury Crate for the
    laptop, including its service and ASUS hotkey/OSD components. Restart if asked.
 3. Open Armoury Crate once. Its Game Library right-click menu can stay disabled.

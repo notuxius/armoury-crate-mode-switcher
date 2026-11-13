@@ -147,7 +147,7 @@ try {
     <Enabled>true</Enabled>
     <FileHippoId />
     <LastUpdated xsi:nil="true" />
-    <TargetPath>..\_Drivers\ASUS\Armory Crate\Mode\_.zip</TargetPath>
+    <TargetPath>..\_Drivers\ASUS\Armoury Crate\Armoury Crate Mode Switcher\_.zip</TargetPath>
     <FixedDownloadUrl>https://codeload.github.com/notuxius/armoury-crate-mode-switcher/zip/{version}</FixedDownloadUrl>
     <Name>ASUS\Armory Crate Mode</Name>
   </ApplicationJob>

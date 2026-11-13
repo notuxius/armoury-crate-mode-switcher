@@ -34,7 +34,7 @@ The Armoury Crate app window can remain closed after initialization, but its ser
 ## Install
 
 1. Install the ASUS prerequisites and open Armoury Crate once. Its Game Library right-click menu can remain disabled.
-2. Download this repository using **Code > Download ZIP**, or clone it, and extract the complete folder.
+2. Download the installer ZIP from the [latest GitHub release](https://github.com/notuxius/armoury-crate-mode-switcher/releases/latest) and extract the complete folder.
 3. Run `Install.cmd`, approve the Windows setup prompt, and choose **Automatic**, **Top**, or **Bottom** for the separate desktop submenu.
 4. If Nilesoft is installed, hold Ctrl while right-clicking the desktop once to reload its configuration.
 5. Use the hotkeys, or right-click the desktop and open **Armoury Crate Modes**. On the default Windows 11 menu, choose **Show more options** first.
@@ -57,7 +57,7 @@ Run `Build.ps1` with Windows PowerShell. It compiles `AsusMode.cs` to a windowle
 
 `ketarin/Armory Crate Mode.xml` imports a GitHub updater entry. Ketarin checks the latest commit on `main` and downloads that exact commit archive when it changes. The post-download PowerShell command validates and extracts it into `Package` beside the ZIP, retaining the previous extracted package as `Package.previous`.
 
-By default downloads go to `..\_Drivers\ASUS\Armory Crate\Mode\_.zip` relative to Ketarin's startup directory. Change the target path for your layout; extraction and installation follow the downloaded ZIP location. **Update** downloads and prepares files; **Install** runs the downloaded setup and offers Automatic/Top/Bottom placement. It does not change the installed helper merely because an update was downloaded. No GitHub login or token is required.
+By default downloads go to `..\_Drivers\ASUS\Armoury Crate\Armoury Crate Mode Switcher\_.zip` relative to Ketarin's startup directory. Change the target path for your layout; extraction and installation follow the downloaded ZIP location. **Update** downloads and prepares files; **Install** runs the downloaded setup and offers Automatic/Top/Bottom placement. It does not change the installed helper merely because an update was downloaded. No GitHub login or token is required.
 
 The readable post-download command is also provided as `ketarin/Extract-Package.ps1`; the XML embeds the same script so the first download works without a preinstalled bootstrap file.
 
