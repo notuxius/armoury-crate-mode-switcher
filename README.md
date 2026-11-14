@@ -55,7 +55,7 @@ Run `Build.ps1` with Windows PowerShell. It compiles `AsusMode.cs` to a windowle
 
 ## Ketarin
 
-`ketarin/Armory Crate Mode.xml` imports a GitHub updater entry. Ketarin checks the latest commit on `main` and downloads that exact commit archive when it changes. The post-download PowerShell command validates and extracts it into `Package` beside the ZIP, retaining the previous extracted package as `Package.previous`.
+`ketarin/Armory Crate Mode.xml` imports a GitHub updater entry. Ketarin checks the latest commit on `main` and downloads that exact commit archive when it changes. The post-download PowerShell command validates and extracts it into `Package` beside the ZIP, retaining the previous extracted package as `Package.previous`. Extraction uses the Windows temporary folder. The updater copies files into the existing package folders so Google Drive for desktop can track each file.
 
 By default downloads go to `..\_Drivers\ASUS\Armoury Crate\Armoury Crate Mode Switcher\_.zip` relative to Ketarin's startup directory. Change the target path for your layout; extraction and installation follow the downloaded ZIP location. **Update** downloads and prepares files; **Install** runs the downloaded setup and offers Automatic/Top/Bottom placement. It does not change the installed helper merely because an update was downloaded. No GitHub login or token is required.
 

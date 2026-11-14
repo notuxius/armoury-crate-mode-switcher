@@ -49,13 +49,16 @@ $archive = [IO.Path]::GetFullPath($app.PreviousLocation)
 $folder = [IO.Path]::GetDirectoryName($archive)
 $destination = Join-Path $folder 'Package'
 $previous = Join-Path $folder 'Package.previous'
-$stage = Join-Path $folder ('extract-' + [Guid]::NewGuid().ToString('N'))
+$tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\')
+$stage = Join-Path $tempRoot ('extract-' + [Guid]::NewGuid().ToString('N'))
 
 function Assert-PackagePath([string]$Path) {
     $full = [IO.Path]::GetFullPath($Path)
-    if ([IO.Path]::GetDirectoryName($full) -ne $folder -or
-        [IO.Path]::GetFileName($full) -notmatch '^(Package(\.previous)?|extract-[0-9a-f]{32})$') {
-        throw 'Refusing to modify a path outside the package download folder.'
+    $parent = [IO.Path]::GetDirectoryName($full)
+    $name = [IO.Path]::GetFileName($full)
+    if (-not (($parent -eq $folder -and $name -in @('Package','Package.previous')) -or
+              ($parent -eq $tempRoot -and $full -eq $stage -and $name -match '^extract-[0-9a-f]{32}$'))) {
+        throw 'Refusing to modify an unexpected package path.'
     }
     if (Test-Path -LiteralPath $full) {
         $items = @(Get-Item -LiteralPath $full) + @(Get-ChildItem -LiteralPath $full -Recurse -Force)
@@ -63,6 +66,16 @@ function Assert-PackagePath([string]$Path) {
             throw 'The package folder must not contain a symbolic link or junction.'
         }
     }
+}
+
+# Mirror individual files so Drive can track changes under stable package directories.
+function Copy-PackageTree([string]$From, [string]$To) {
+    Assert-PackagePath $To
+    $marker = Join-Path $To 'package.commit'
+    if (Test-Path -LiteralPath $marker) { Remove-Item -LiteralPath $marker -Force }
+    &amp; "$env:SystemRoot\System32\robocopy.exe" $From $To /E /PURGE /IS /IT /XJ /R:1 /W:1 /XF desktop.ini package.commit /NFL /NDL /NJH /NJS /NP | Out-Null
+    if ($LASTEXITCODE -ge 8) { throw "Package copy to $To failed (robocopy $LASTEXITCODE)." }
+    Copy-Item -LiteralPath (Join-Path $From 'package.commit') -Destination $marker -Force
 }
 
 Assert-PackagePath $destination
@@ -113,19 +126,13 @@ try {
     }
     [IO.File]::WriteAllText((Join-Path $source 'package.commit'), $commit)
     if ($activeArchive -ne $archive) { Copy-Item -LiteralPath $activeArchive -Destination $archive -Force }
-    if (Test-Path -LiteralPath $previous) {
-        Assert-PackagePath $previous
-        Remove-Item -LiteralPath $previous -Recurse -Force
+    if (Test-Path -LiteralPath (Join-Path $destination 'package.commit') -PathType Leaf) {
+        Copy-PackageTree $destination $previous
     }
-    if (Test-Path -LiteralPath $destination) {
-        Assert-PackagePath $destination
-        Move-Item -LiteralPath $destination -Destination $previous
-    }
-    try { Move-Item -LiteralPath $source -Destination $destination }
+    try { Copy-PackageTree $source $destination }
     catch {
-        if ((Test-Path -LiteralPath $previous) -and -not (Test-Path -LiteralPath $destination)) {
-            Assert-PackagePath $previous
-            Move-Item -LiteralPath $previous -Destination $destination
+        if (Test-Path -LiteralPath (Join-Path $previous 'package.commit') -PathType Leaf) {
+            Copy-PackageTree $previous $destination
         }
         throw
     }
