@@ -1,4 +1,4 @@
-﻿# Armoury Crate Mode Switcher
+# Armoury Crate Mode Switcher
 
 Switch directly between Silent, Performance, and Turbo using keyboard shortcuts or a separate **Armoury Crate Modes** desktop context menu. Requests go through Armoury Crate's service so its operating-mode selection stays in sync.
 
@@ -19,7 +19,8 @@ Switch directly between Silent, Performance, and Turbo using keyboard shortcuts 
 - An independent **Armoury Crate Modes** submenu stays available when Armoury Crate's Game Library menu is disabled or recreated. Setup offers Automatic, Top, or Bottom placement on the desktop menu. Automatic uses Nilesoft to place it directly above ArmouryCrate; if that menu is hidden, it stays in the same section before Unblock or the next available NVIDIA/New entry.
 - No desktop shortcuts. Upgrading removes only our mode commands from the old Game Library integration, retaining its other entries.
 - With Nilesoft Shell 1.9 or later, a left-side radio dot marks the selected mode. The default Windows classic menu uses a trailing checkmark. Without Nilesoft, Automatic leaves positioning to Windows; exact placement relative to another menu requires Nilesoft.
-- Selection follows changes made through Armoury Crate and Fn+F5. Reopen the context menu to refresh it; the classic-menu watcher checks once per second.
+- Selection follows changes made through Armoury Crate and Fn+F5. The classic-menu watcher uses registry notifications, with a periodic service health check. Reopen the context menu to see the current selection.
+- If several requests arrive during a switch, the helper applies the newest pending request after the current switch finishes.
 
 ## Requirements
 
@@ -60,8 +61,9 @@ The helper tracks the mode published by the ASUS service rather than measuring f
 Logs are stored under `%LOCALAPPDATA%\ASUS Mode Shortcuts`:
 
 - `setup-result.txt`: installation result.
-- `last-result.txt`: latest mode request and confirmation.
+- `last-result.txt`: latest mode request and confirmation. Successful requests include `DispatchMs`, `ConfirmMs`, and `OsdMs`.
 - `watcher-status.txt`: background listener and hotkey registration status.
+- `watcher-error.txt`: watcher, menu, and diagnostics errors.
 
 Other applications can reserve the same keyboard shortcuts. The helper retries unavailable hotkeys. The separate modes menu does not depend on ASUS maintaining its Game Library menu registration.
 

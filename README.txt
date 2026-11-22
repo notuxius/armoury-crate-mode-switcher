@@ -1,4 +1,4 @@
-﻿ASUS MODE SHORTCUTS - ARMOURY CRATE SERVICE EDITION
+ASUS MODE SHORTCUTS - ARMOURY CRATE SERVICE EDITION
 
 For ASUS laptops with compatible Armoury Crate operating-mode services.
 Tested on ASUS ROG Zephyrus M16 GU604VZ; other models are not independently tested.
@@ -52,9 +52,9 @@ After installation, hold Ctrl while opening the desktop context menu once
 to reload the configuration. Automatic placement needs Nilesoft; Top/Bottom also work with Windows menus.
 Without Nilesoft, the classic menu retains its existing text checkmark.
 
-The watcher reads the mode published by the Armoury Crate service once per
-second. It follows our shortcuts, Armoury Crate UI selections and mode changes
-that the service handles, including Fn+F5. The app may remain open.
+The watcher uses Windows registry notifications for Armoury Crate mode changes,
+with a service health check every 15 seconds. It follows our shortcuts, Armoury
+Crate UI selections and Fn+F5. The Armoury Crate app may remain open.
 Reopen the context menu to see the updated checkmark.
 The radio dot reads Armoury Crate's published SelectedMode and IsLocked values
 directly whenever the menu opens, avoiding a stale cached menu selection.
@@ -110,14 +110,13 @@ The one-time Windows elevation prompt may still appear during installation.
 
 IMPLEMENTATION AND DIAGNOSTICS
 Support files: C:\ProgramData\ASUS Mode Shortcuts.
-The ASUS Mode Checkmark Watcher task starts --watch at login. This existing
-resident helper now also receives mode requests immediately, without waiting
-for its one-second checkmark poll. Ctrl+Alt+S/P/T are registered directly with
-Windows; Explorer's shortcut hotkey launcher is no longer used.
-Start links and menu entries use --request to signal a per-user, per-session
-fixed mode event. Only the current user and SYSTEM have access; no arbitrary
-command or path is accepted. The background worker calls Armoury Crate's
-service and displays its original OSD without launching another process.
+The ASUS Mode Checkmark Watcher task starts --watch at login. The resident
+helper registers Ctrl+Alt+S/P/T directly with Windows. Start links and menu
+entries use --request to signal its per-user, per-session request slot. The
+current user and SYSTEM can submit one of the three fixed modes. During a switch,
+the newest pending request replaces older pending requests. The background
+worker calls Armoury Crate's service and displays its original OSD. Error
+popups run independently so the worker can take the next request immediately.
 Three on-demand scheduled mode tasks remain as a recovery path if the resident
 helper is absent. They have no automatic triggers and are not used for normal
 switches. No shell or script interpreter runs during daily use, and no G-Helper
@@ -127,14 +126,18 @@ Setup builds the windowless helper with the Windows .NET Framework compiler,
 protects the installed files, and creates the tasks and shortcuts. It uses
 native 64-bit Windows PowerShell. Setup requires
 the initialized Armoury Crate service endpoint and its published mode state.
+Setup confirms the installed watcher has registered all three hotkeys.
 It does not patch ASUS binaries, edit ASUS's selected-mode registry values,
 or stop/restart ASUS services to force a refresh.
 
 Logs under %LOCALAPPDATA%\ASUS Mode Shortcuts:
 setup-result.txt: installation result.
-last-result.txt: most recent mode request, confirmation and helper processing time.
-The logged time excludes keyboard/menu dispatch and is not hardware settling time.
-watcher-status.txt: request listener status and S/P/T hotkey registrations.
+last-result.txt: most recent mode request, including DispatchMs (from the hotkey
+handler or helper entry to worker dispatch), ConfirmMs (dispatch to ASUS mode
+confirmation), and OsdMs (extra time to observe or request the native OSD).
+These timings start inside the helper and end before hardware settling.
+watcher-status.txt: request listener status, process ID and S/P/T registrations.
+watcher-error.txt: watcher, menu, and diagnostics errors.
 
 --check validates the service endpoint and mode information without switching.
 --osd-test Silent/Performance/Turbo displays only a popup, with no mode change.

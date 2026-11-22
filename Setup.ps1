@@ -136,12 +136,20 @@ try {
         $asusAcl.AddAccessRule($asusRule)
     }
     Set-Acl -LiteralPath $asusSupportDir -AclObject $asusAcl
-    if ($asusExistingWatcher) {
-        $asusStopWatcher = Start-Process -FilePath $asusSourceExe -ArgumentList '--stop-watch' -WindowStyle Hidden -Wait -PassThru
-        Start-Sleep -Milliseconds 1500
-        if ((Get-ScheduledTask -TaskName $asusWatcherName -TaskPath '\').State -eq 'Running') {
+    if ($asusExistingWatcher -and $asusExistingWatcher.State -in @('Running','Queued')) {
+        Start-Process -FilePath $asusSourceExe -ArgumentList '--stop-watch' -WindowStyle Hidden -Wait
+        $asusStopTime = [Diagnostics.Stopwatch]::StartNew()
+        while ((Get-ScheduledTask -TaskName $asusWatcherName -TaskPath '\').State -in @('Running','Queued')) {
+            if ($asusStopTime.ElapsedMilliseconds -ge 2500) { break }
+            Start-Sleep -Milliseconds 100
+        }
+        if ((Get-ScheduledTask -TaskName $asusWatcherName -TaskPath '\').State -in @('Running','Queued')) {
             Stop-ScheduledTask -TaskName $asusWatcherName -TaskPath '\'
-            Start-Sleep -Milliseconds 500
+            $asusStopTime.Restart()
+            while ((Get-ScheduledTask -TaskName $asusWatcherName -TaskPath '\').State -in @('Running','Queued')) {
+                if ($asusStopTime.ElapsedMilliseconds -ge 3000) { throw 'The running mode watcher could not be stopped.' }
+                Start-Sleep -Milliseconds 100
+            }
         }
     }
     Copy-Item -LiteralPath $asusSourceExe -Destination $asusHelper -Force
@@ -236,7 +244,25 @@ public static class AsusModeLinkRefresh {
     $asusWatcherTrigger = New-ScheduledTaskTrigger -AtLogOn -User $asusIdentity.Name
     $asusWatcherSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -StartWhenAvailable
     Register-ScheduledTask -TaskName $asusWatcherName -TaskPath '\' -Action $asusWatcherAction -Trigger $asusWatcherTrigger -Principal $asusPrincipal -Settings $asusWatcherSettings -Description 'ASUS Mode Shortcuts: handles Ctrl+Alt+S/P/T and immediate mode requests, and tracks Armoury Crate service selection.' -Force | Out-Null
+    $asusWatcherStatusPath = Join-Path $asusSetupLogFolder 'watcher-status.txt'
+    $asusWatcherStartedUtc = [DateTime]::UtcNow
     Start-ScheduledTask -TaskName $asusWatcherName -TaskPath '\'
+    $asusReadyTime = [Diagnostics.Stopwatch]::StartNew()
+    $asusWatcherReady = $false
+    while ($asusReadyTime.ElapsedMilliseconds -lt 12000) {
+        $asusStatusFile = Get-Item -LiteralPath $asusWatcherStatusPath -ErrorAction SilentlyContinue
+        if ($asusStatusFile -and $asusStatusFile.LastWriteTimeUtc -ge $asusWatcherStartedUtc) {
+            $asusStatusLine = Get-Content -LiteralPath $asusWatcherStatusPath -ErrorAction SilentlyContinue -TotalCount 1
+            if ($asusStatusLine -match 'Fast request listener active; hotkeys S=True, P=True, T=True; PID=(\d+);') {
+                $asusWatcherProcess = Get-Process -Id ([int]$Matches[1]) -ErrorAction SilentlyContinue
+                if ($asusWatcherProcess -and $asusWatcherProcess.Path -eq $asusHelper) { $asusWatcherReady = $true; break }
+            }
+        }
+        Start-Sleep -Milliseconds 100
+    }
+    if (-not $asusWatcherReady) {
+        throw 'The background helper did not confirm all three hotkeys. Check watcher-status.txt for shortcut conflicts and watcher-error.txt for startup or menu errors.'
+    }
     # The old console-based launch path is no longer used.
     foreach ($asusOldFile in @('Set-Mode.ps1','Silent.vbs','Performance.vbs','Turbo.vbs')) {
         $asusOldFilePath = Join-Path $asusSupportDir $asusOldFile

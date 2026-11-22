@@ -1,28 +1,28 @@
-﻿using System;
-using System.ComponentModel;
+using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Microsoft.Win32;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Threading;
-using System.Text;
+using Microsoft.Win32.SafeHandles;
 
 internal static class Program {
     internal const string StateKey = @"Software\ASUSModeShortcuts";
-    internal static string Root = AppDomain.CurrentDomain.BaseDirectory;
     internal static string[] Modes = { "Silent", "Performance", "Turbo" };
 
     [STAThread]
     static int Main(string[] args) {
+        long received = Stopwatch.GetTimestamp();
         try {
             // The normal menu path only signals an already-running helper.
             if (args.Length == 2 && args[0] == "--request" && Array.IndexOf(Modes, args[1]) >= 0) {
-                if (ModeRequests.TrySend(args[1])) return 0;
+                if (ModeRequests.TrySend(Array.IndexOf(Modes, args[1]), received)) return 0;
                 // Recovery only: preserve prompt-free operation if the resident helper is absent.
                 dynamic scheduler = Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service"));
                 scheduler.Connect();
@@ -47,40 +47,56 @@ internal static class Program {
             string mode = args[1];
             if (args[0] == "--osd-test") return NativeAsusOsd.Show(mode) ? 0 : 3;
             if (args[0] != "--apply") return 2;
-            return ApplyMode(mode);
+            ApplyMode(mode, received);
+            RefreshMenuSafely(true, true);
+            return 0;
         } catch (Exception error) {
-            Log(error.ToString());
+            Log(error.ToString(), args.Length == 1 && args[0] == "--watch" ? "watcher-error.txt" : "last-result.txt");
             if (args.Length > 0 && (args[0] == "--apply" || args[0] == "--request"))
-                Application.Run(new ModeToast(error is InvalidOperationException ? error.Message : "Could not change mode", true, null));
+                Application.Run(new ModeToast(ErrorMessage(error)));
             return 1;
         }
     }
 
-    internal static int ApplyMode(string mode) {
-        var elapsed = Stopwatch.StartNew();
-            if (mode == "Turbo" && SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Offline)
-                throw new InvalidOperationException("Connect AC power for Turbo mode");
-            bool servicePopup = ArmouryService.Select(mode);
+    internal static void ApplyMode(string mode, long received) {
+        long started = Stopwatch.GetTimestamp();
+        if (mode == "Turbo" && SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Offline)
+            throw new InvalidOperationException("Connect AC power for Turbo mode");
+        bool servicePopup = ArmouryService.Select(mode);
+        long confirmed = Stopwatch.GetTimestamp();
+        bool nativeShown = servicePopup || NativeAsusOsd.Show(mode);
+        long feedback = Stopwatch.GetTimestamp();
+        Log("Armoury Crate service confirmed " + mode + (nativeShown ? "; ASUS native OSD observed" : "; ASUS native OSD unavailable")
+            + "; DispatchMs=" + Milliseconds(received, started) + "; ConfirmMs=" + Milliseconds(started, confirmed)
+            + "; OsdMs=" + Milliseconds(confirmed, feedback));
+        try {
             using (RegistryKey key = Registry.CurrentUser.CreateSubKey(StateKey)) {
                 key.SetValue("LastAppliedMode", mode);
                 key.SetValue("LastAppliedUtc", DateTime.UtcNow.ToString("o"));
             }
-            ModeMenu.Select(mode);
-            bool nativeShown = servicePopup || NativeAsusOsd.Show(mode);
-            Log("Armoury Crate service confirmed " + mode + (nativeShown ? "; ASUS native OSD displayed" : "; ASUS native OSD unavailable (no replacement popup shown)") + "; helper processing " + elapsed.ElapsedMilliseconds + " ms");
-            return 0;
-    }
-    internal static void ShowError(Exception error) {
-        Log(error.ToString());
-        Application.Run(new ModeToast(error is InvalidOperationException ? error.Message : "Could not change mode", true, null));
+        } catch (Exception error) { Log(error.ToString(), "watcher-error.txt"); }
     }
 
-    internal static void Log(string message) {
+    static long Milliseconds(long start, long end) {
+        return (long)((end - start) * 1000.0 / Stopwatch.Frequency);
+    }
+
+    internal static void RefreshMenuSafely(bool serviceAvailable, bool repair = false) {
+        try { ModeMenu.Sync(serviceAvailable, repair); }
+        catch (Exception error) { Log(error.ToString(), "watcher-error.txt"); }
+    }
+
+    internal static string ErrorMessage(Exception error) {
+        return error is InvalidOperationException ? error.Message : "Could not change mode";
+    }
+
+    internal static bool Log(string message, string file = "last-result.txt") {
         try {
             string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ASUS Mode Shortcuts");
             Directory.CreateDirectory(dir);
-            File.WriteAllText(Path.Combine(dir, "last-result.txt"), DateTime.Now.ToString("s") + " " + message);
-        } catch { }
+            File.WriteAllText(Path.Combine(dir, file), DateTime.Now.ToString("s") + " " + message);
+            return true;
+        } catch { return false; }
     }
 }
 
@@ -95,10 +111,15 @@ internal static class ModeMenu {
             } finally { if (owned) gate.ReleaseMutex(); }
         }
     }
-    internal static void Select(string mode) {
+    internal static void Sync(bool serviceAvailable, bool repair) {
         Locked(delegate {
-            using (RegistryKey key = Registry.CurrentUser.CreateSubKey(Program.StateKey)) key.SetValue("CheckedMode", mode);
-            RefreshCore();
+            string mode = serviceAvailable ? ArmouryService.CurrentMode() : "";
+            using (RegistryKey key = Registry.CurrentUser.CreateSubKey(Program.StateKey)) {
+                if (!String.Equals(key.GetValue("CheckedMode") as string, mode)) {
+                    RefreshCore(mode);
+                    key.SetValue("CheckedMode", mode);
+                } else if (repair) RefreshCore(mode);
+            }
         });
     }
     internal static void Invalidate(string reason) {
@@ -108,14 +129,16 @@ internal static class ModeMenu {
                 key.SetValue("LastInvalidatedReason", reason);
                 key.SetValue("LastInvalidatedUtc", DateTime.UtcNow.ToString("o"));
             }
-            RefreshCore();
+            RefreshCore("");
         });
     }
-    internal static void Refresh() { Locked(RefreshCore); }
-    static void RefreshCore() {
-        string selected;
-        using (RegistryKey state = Registry.CurrentUser.OpenSubKey(Program.StateKey))
-            selected = state == null ? null : state.GetValue("CheckedMode") as string;
+    internal static void Refresh() {
+        Locked(delegate {
+            using (RegistryKey state = Registry.CurrentUser.OpenSubKey(Program.StateKey))
+                RefreshCore(state == null ? null : state.GetValue("CheckedMode") as string);
+        });
+    }
+    static void RefreshCore(string selected) {
         foreach (string mode in Program.Modes) {
             using (RegistryKey entry = Registry.LocalMachine.OpenSubKey(
                 @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\ASUSModeShortcuts." + mode, true)) {
@@ -123,57 +146,131 @@ internal static class ModeMenu {
                 // Keep ASUS icons; the checkmark is alongside the selected mode's label.
                 // This reflects Armoury Crate service state, not raw firmware telemetry.
                 string label = mode == selected ? mode + "  \u2713" : mode;
-                entry.SetValue("MUIVerb", label, RegistryValueKind.String);
-                entry.SetValue("", label, RegistryValueKind.String);
+                if (!String.Equals(entry.GetValue("MUIVerb") as string, label)) entry.SetValue("MUIVerb", label);
+                if (!String.Equals(entry.GetValue("") as string, label)) entry.SetValue("", label);
             }
         }
     }
 }
 
-// Only the current user and SYSTEM can signal these fixed mode actions.
-// No arbitrary command, file path or other privileged operation is accepted.
-internal static class ModeRequests {
-    internal static string Name(string mode) { return @"Local\ASUSArmouryFastMode." + mode; }
-    internal static EventWaitHandle Create(string mode) {
-        var security = new EventWaitHandleSecurity();
-        security.SetAccessRuleProtection(true, false);
-        security.AddAccessRule(new EventWaitHandleAccessRule(WindowsIdentity.GetCurrent().User, EventWaitHandleRights.FullControl, AccessControlType.Allow));
-        security.AddAccessRule(new EventWaitHandleAccessRule(new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null), EventWaitHandleRights.FullControl, AccessControlType.Allow));
+// The current user and SYSTEM can submit one of three fixed actions. The newest
+// pending request replaces older requests without interrupting an active switch.
+internal sealed class ModeRequests : IDisposable {
+    const int SlotSize = 16;
+    const int ModeOffset = 8;
+    readonly MemoryMappedFile map;
+    readonly MemoryMappedViewAccessor slot;
+    readonly Mutex gate;
+    internal readonly EventWaitHandle Signal;
+
+    static string Prefix(SecurityIdentifier user) { return @"Local\ASUSArmouryFastMode.v2." + user.Value; }
+
+    internal ModeRequests() {
+        SecurityIdentifier user;
+        using (var identity = WindowsIdentity.GetCurrent()) user = identity.User;
+        var system = new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null);
+        var memorySecurity = new MemoryMappedFileSecurity();
+        var mutexSecurity = new MutexSecurity();
+        var eventSecurity = new EventWaitHandleSecurity();
+        foreach (SecurityIdentifier sid in new[] { user, system }) {
+            memorySecurity.AddAccessRule(new AccessRule<MemoryMappedFileRights>(sid, MemoryMappedFileRights.FullControl, AccessControlType.Allow));
+            mutexSecurity.AddAccessRule(new MutexAccessRule(sid, MutexRights.FullControl, AccessControlType.Allow));
+            eventSecurity.AddAccessRule(new EventWaitHandleAccessRule(sid, EventWaitHandleRights.FullControl, AccessControlType.Allow));
+        }
+        string name = Prefix(user);
         bool created;
-        return new EventWaitHandle(false, EventResetMode.AutoReset, Name(mode), out created, security);
-    }
-    internal static bool TrySend(string mode) {
         try {
-            using (var signal = EventWaitHandle.OpenExisting(Name(mode), EventWaitHandleRights.Modify)) signal.Set();
-            return true;
+            map = MemoryMappedFile.CreateNew(name + ".Slot", SlotSize, MemoryMappedFileAccess.ReadWrite,
+                MemoryMappedFileOptions.None, memorySecurity, HandleInheritability.None);
+            slot = map.CreateViewAccessor(0, SlotSize);
+            gate = new Mutex(false, name + ".Gate", out created, mutexSecurity);
+            Signal = new EventWaitHandle(false, EventResetMode.AutoReset, name + ".Ready", out created, eventSecurity);
+        } catch { Dispose(); throw; }
+    }
+
+    internal static bool TrySend(int mode, long received) {
+        string name;
+        using (var identity = WindowsIdentity.GetCurrent()) name = Prefix(identity.User);
+        try {
+            using (var signal = EventWaitHandle.OpenExisting(name + ".Ready", EventWaitHandleRights.Modify))
+            using (var sharedGate = Mutex.OpenExisting(name + ".Gate", MutexRights.Synchronize | MutexRights.Modify))
+            using (var sharedMap = MemoryMappedFile.OpenExisting(name + ".Slot", MemoryMappedFileRights.ReadWrite))
+            using (var sharedSlot = sharedMap.CreateViewAccessor(0, SlotSize))
+                return Publish(sharedSlot, sharedGate, signal, mode, received);
         } catch (WaitHandleCannotBeOpenedException) { return false; }
+          catch (FileNotFoundException) { return false; }
           catch (UnauthorizedAccessException) { return false; }
+    }
+
+    static bool Enter(Mutex mutex) {
+        try { return mutex.WaitOne(250); }
+        catch (AbandonedMutexException) { return true; }
+    }
+
+    static bool Publish(MemoryMappedViewAccessor queue, Mutex mutex, EventWaitHandle signal, int mode, long received) {
+        if (!Enter(mutex)) return false;
+        try {
+            if (received >= queue.ReadInt64(0)) {
+                // Wake the worker while we still hold the gate. If the sender is
+                // terminated mid-write, an empty slot is safer than a mixed request.
+                signal.Set();
+                queue.Write(ModeOffset, 0);
+                queue.Write(0, received);
+                queue.Write(ModeOffset, mode + 1);
+            }
+            return true;
+        } finally { mutex.ReleaseMutex(); }
+    }
+
+    internal bool Publish(int mode, long received) { return Publish(slot, gate, Signal, mode, received); }
+
+    internal int Take(out long received) {
+        received = 0;
+        if (!Enter(gate)) {
+            Signal.Set();
+            return -1;
+        }
+        try {
+            int mode = slot.ReadInt32(ModeOffset) - 1;
+            received = slot.ReadInt64(0);
+            slot.Write(ModeOffset, 0);
+            return mode;
+        } finally { gate.ReleaseMutex(); }
+    }
+
+    public void Dispose() {
+        if (Signal != null) Signal.Dispose();
+        if (gate != null) gate.Dispose();
+        if (slot != null) slot.Dispose();
+        if (map != null) map.Dispose();
     }
 }
 
 // A message-only window registers the three hotkeys; it never takes focus.
 internal sealed class ModeHotkeys : NativeWindow, IDisposable {
-    readonly EventWaitHandle[] requests;
+    static readonly uint[] Keys = { 0x53, 0x50, 0x54 };
+    readonly ModeRequests requests;
     readonly bool[] registered = new bool[3];
     [DllImport("user32.dll", SetLastError = true)] static extern bool RegisterHotKey(IntPtr window, int id, uint modifiers, uint key);
     [DllImport("user32.dll")] static extern bool UnregisterHotKey(IntPtr window, int id);
-    internal ModeHotkeys(EventWaitHandle[] requests) {
+    internal ModeHotkeys(ModeRequests requests) {
         this.requests = requests;
         CreateHandle(new CreateParams { Caption = "ASUS Mode Hotkeys", Parent = new IntPtr(-3) });
         RegisterMissing();
     }
     internal void RegisterMissing() {
-        uint[] keys = { 0x53, 0x50, 0x54 };
         for (int i = 0; i < 3; i++)
-            if (!registered[i]) registered[i] = RegisterHotKey(Handle, i + 1, 0x4003, keys[i]);
+            if (!registered[i]) registered[i] = RegisterHotKey(Handle, i + 1, 0x4003, Keys[i]);
     }
+    internal bool AllRegistered { get { return registered[0] && registered[1] && registered[2]; } }
     internal string Status {
         get { return "S=" + registered[0] + ", P=" + registered[1] + ", T=" + registered[2]; }
     }
     protected override void WndProc(ref Message message) {
         if (message.Msg == 0x0312) {
             int index = message.WParam.ToInt32() - 1;
-            if (index >= 0 && index < 3) requests[index].Set();
+            if (index >= 0 && index < 3 && !requests.Publish(index, Stopwatch.GetTimestamp()))
+                Program.Log("The mode request slot was busy.", "watcher-error.txt");
         }
         base.WndProc(ref message);
     }
@@ -185,70 +282,152 @@ internal sealed class ModeHotkeys : NativeWindow, IDisposable {
 
 // The existing resident watcher also handles requests immediately on a worker.
 internal sealed class ModeWatcher : ApplicationContext {
-    readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
+    readonly System.Windows.Forms.Timer healthTimer = new System.Windows.Forms.Timer { Interval = 15000 };
+    readonly System.Windows.Forms.Timer retryTimer = new System.Windows.Forms.Timer { Interval = 1000 };
     readonly EventWaitHandle stop = new EventWaitHandle(false, EventResetMode.ManualReset, @"Local\ASUSModeCheckmarkStop");
-    readonly EventWaitHandle[] requests = new EventWaitHandle[3];
+    readonly WindowsFormsSynchronizationContext ui = new WindowsFormsSynchronizationContext();
+    readonly ModeRequests requests;
+    readonly RegistryModeWatch registryWatch;
+    readonly RegisteredWaitHandle stopWait;
     readonly Thread worker;
     readonly ModeHotkeys hotkeys;
+    readonly int pid;
     string lastHotkeyStatus;
+    ModeToast errorToast;
+    bool serviceAvailable;
+    volatile bool disposed;
+
     internal ModeWatcher() {
-        stop.Reset();
-        for (int i = 0; i < 3; i++) requests[i] = ModeRequests.Create(Program.Modes[i]);
-        worker = new Thread(RunRequests) { IsBackground = true, Name = "ASUS mode requests" };
-        worker.SetApartmentState(ApartmentState.STA);
-        worker.Start();
-        hotkeys = new ModeHotkeys(requests);
-        RefreshState();
-        UpdateStatus();
-        timer.Interval = 1000;
-        timer.Tick += delegate {
-            if (stop.WaitOne(0)) { ExitThread(); return; }
-            hotkeys.RegisterMissing(); UpdateStatus(); RefreshState();
-        };
-        timer.Start();
+        try {
+            stop.Reset();
+            using (Process self = Process.GetCurrentProcess()) pid = self.Id;
+            requests = new ModeRequests();
+            hotkeys = new ModeHotkeys(requests);
+            registryWatch = new RegistryModeWatch(ArmouryService.OpenModeKey, delegate { Post(OnRegistryChange); });
+            stopWait = ThreadPool.RegisterWaitForSingleObject(stop, delegate { Post(ExitThread); }, null, Timeout.Infinite, true);
+            worker = new Thread(RunRequests) { IsBackground = true, Name = "ASUS mode requests" };
+            worker.SetApartmentState(ApartmentState.STA);
+            worker.Start();
+            CheckHealth();
+            healthTimer.Tick += delegate { CheckHealth(); };
+            healthTimer.Start();
+            retryTimer.Tick += delegate { hotkeys.RegisterMissing(); UpdateStatus(); };
+            UpdateStatus();
+        } catch { Dispose(); throw; }
     }
-    void RunRequests() {
-        WaitHandle[] handles = { stop, requests[0], requests[1], requests[2] };
-        while (true) {
-            int index = WaitHandle.WaitAny(handles);
-            if (index == 0) return;
-            try { Program.ApplyMode(Program.Modes[index - 1]); }
-            catch (Exception error) { Program.ShowError(error); }
+
+    void Post(Action action) {
+        if (disposed) return;
+        try { ui.Post(delegate { if (!disposed) action(); }, null); }
+        catch (InvalidOperationException error) {
+            if (!disposed) Program.Log(error.ToString(), "watcher-error.txt");
         }
     }
+
+    void RunRequests() {
+        WaitHandle[] handles = { stop, requests.Signal };
+        while (WaitHandle.WaitAny(handles) == 1) {
+            try {
+                long received;
+                int mode = requests.Take(out received);
+                if (!disposed && mode >= 0 && mode < Program.Modes.Length)
+                    Program.ApplyMode(Program.Modes[mode], received);
+            } catch (Exception error) {
+                Program.Log(error.ToString());
+                Post(delegate {
+                    if (errorToast != null) errorToast.Dispose();
+                    errorToast = new ModeToast(Program.ErrorMessage(error));
+                    errorToast.Show();
+                });
+            }
+        }
+    }
+
     void UpdateStatus() {
         string status = hotkeys.Status;
-        if (status == lastHotkeyStatus) return;
-        lastHotkeyStatus = status;
-        string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ASUS Mode Shortcuts");
-        Directory.CreateDirectory(dir);
-        File.WriteAllText(Path.Combine(dir, "watcher-status.txt"), DateTime.Now.ToString("s") + " Fast request listener active; hotkeys " + status + "; tracking Armoury Crate service state");
+        if (status != lastHotkeyStatus && Program.Log("Fast request listener active; hotkeys " + status
+                + "; PID=" + pid + "; tracking Armoury Crate service state", "watcher-status.txt"))
+            lastHotkeyStatus = status;
+        retryTimer.Enabled = !hotkeys.AllRegistered || status != lastHotkeyStatus;
     }
-    static void RefreshState() {
-        try {
-            string mode = ArmouryService.CurrentMode();
-            string previous;
-            using (RegistryKey state = Registry.CurrentUser.OpenSubKey(Program.StateKey))
-                previous = state == null ? "" : state.GetValue("CheckedMode", "") as string;
-            if (mode != previous) {
-                if (String.IsNullOrEmpty(mode)) ModeMenu.Invalidate("Armoury Crate mode unavailable, changing, Windows or Manual");
-                else ModeMenu.Select(mode);
-            }
-        } catch { try { ModeMenu.Invalidate("Armoury Crate state unavailable"); } catch { } }
+
+    void CheckHealth() {
+        serviceAvailable = ArmouryService.IsAvailable();
+        registryWatch.EnsureRegistered();
+        Program.RefreshMenuSafely(serviceAvailable, true);
+    }
+
+    void OnRegistryChange() {
+        registryWatch.Rearm();
+        Program.RefreshMenuSafely(serviceAvailable);
     }
     internal static void Stop() {
         try { using (var signal = EventWaitHandle.OpenExisting(@"Local\ASUSModeCheckmarkStop")) signal.Set(); }
         catch (WaitHandleCannotBeOpenedException) { }
     }
     protected override void Dispose(bool disposing) {
-        if (disposing) {
-            timer.Stop(); timer.Dispose(); hotkeys.Dispose(); stop.Set();
-            if (worker.Join(2000)) {
-                foreach (var request in requests) request.Dispose();
+        if (disposing && !disposed) {
+            disposed = true;
+            if (stopWait != null) stopWait.Unregister(null);
+            healthTimer.Dispose();
+            retryTimer.Dispose();
+            if (registryWatch != null) registryWatch.Dispose();
+            if (errorToast != null) errorToast.Dispose();
+            if (hotkeys != null) hotkeys.Dispose();
+            ui.Dispose();
+            stop.Set();
+            if (worker == null || !worker.IsAlive || worker.Join(1000)) {
+                if (requests != null) requests.Dispose();
                 stop.Dispose();
             }
         }
         base.Dispose(disposing);
+    }
+}
+
+internal sealed class RegistryModeWatch : IDisposable {
+    const uint NotifyLastSet = 0x00000004;
+    readonly Func<RegistryKey> openKey;
+    readonly Action onChange;
+    readonly EventWaitHandle signal = new AutoResetEvent(false);
+    RegistryKey key;
+    RegisteredWaitHandle wait;
+
+    [DllImport("advapi32.dll")]
+    static extern int RegNotifyChangeKeyValue(SafeRegistryHandle key, bool subtree, uint filter,
+        SafeWaitHandle signal, bool asynchronous);
+
+    internal RegistryModeWatch(Func<RegistryKey> openKey, Action onChange) {
+        this.openKey = openKey;
+        this.onChange = onChange;
+    }
+
+    internal void EnsureRegistered() {
+        if (wait != null) return;
+        try {
+            if (key == null) key = openKey();
+            if (key == null) return;
+            int result = RegNotifyChangeKeyValue(key.Handle, false, NotifyLastSet, signal.SafeWaitHandle, true);
+            if (result != 0) throw new System.ComponentModel.Win32Exception(result);
+            wait = ThreadPool.RegisterWaitForSingleObject(signal, delegate { onChange(); }, null, Timeout.Infinite, true);
+        } catch (Exception error) {
+            if (key != null) key.Dispose();
+            key = null;
+            signal.Reset();
+            Program.Log(error.ToString(), "watcher-error.txt");
+        }
+    }
+
+    internal void Rearm() {
+        if (wait != null) wait.Unregister(null);
+        wait = null;
+        EnsureRegistered();
+    }
+
+    public void Dispose() {
+        if (wait != null) wait.Unregister(null);
+        if (key != null) key.Dispose();
+        signal.Dispose();
     }
 }
 
@@ -283,17 +462,21 @@ internal static class ArmouryService {
     }
     internal static void Check() {
         Endpoint();
-        using (RegistryKey key = Registry.LocalMachine.OpenSubKey(ExternalKey)) {
+        using (RegistryKey key = OpenModeKey()) {
             if (key == null) throw new InvalidOperationException("Open Armoury Crate once to initialize operating modes");
             Value(key, "SelectedMode"); Value(key, "IsLocked");
             if ((Value(key, "EnabledModes") & (2 | 4 | 8)) == 0)
                 throw new InvalidOperationException("Armoury Crate does not expose compatible Silent, Performance or Turbo modes on this computer");
         }
     }
-    internal static string CurrentMode(bool validateEndpoint = true) {
+    internal static bool IsAvailable() {
+        try { Endpoint(); return true; }
+        catch { return false; }
+    }
+    internal static RegistryKey OpenModeKey() { return Registry.LocalMachine.OpenSubKey(ExternalKey); }
+    internal static string CurrentMode() {
         try {
-            if (validateEndpoint) Endpoint();
-            using (RegistryKey key = Registry.LocalMachine.OpenSubKey(ExternalKey)) {
+            using (RegistryKey key = OpenModeKey()) {
                 if (key == null || Value(key, "IsLocked") != 0) return "";
                 int mode = Value(key, "SelectedMode");
                 return mode == 2 ? "Silent" : mode == 4 ? "Performance" : mode == 8 ? "Turbo" : "";
@@ -308,7 +491,7 @@ internal static class ArmouryService {
                 if (!owned) throw new InvalidOperationException("Another mode change is still running");
                 IntPtr window = Endpoint();
                 int mask = mode == "Silent" ? 2 : mode == "Performance" ? 4 : 8;
-                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(ExternalKey)) {
+                using (RegistryKey key = OpenModeKey()) {
                     if (key == null) throw new InvalidOperationException("Open Armoury Crate once to initialize operating modes");
                     if (Value(key, "IsLocked") != 0) throw new InvalidOperationException("Armoury Crate is busy changing profiles");
                     if ((Value(key, "EnabledModes") & mask) == 0) throw new InvalidOperationException("This mode is currently unavailable in Armoury Crate");
@@ -322,7 +505,7 @@ internal static class ArmouryService {
                 bool sawPopup = false;
                 while (watch.ElapsedMilliseconds < 15000) {
                     sawPopup |= NativeAsusOsd.Visible();
-                    if (CurrentMode(false) == mode) return sawPopup;
+                    if (CurrentMode() == mode) return sawPopup;
                     System.Threading.Thread.Sleep(10);
                 }
                 throw new InvalidOperationException("Armoury Crate did not confirm the requested mode");
@@ -374,17 +557,15 @@ internal static class NativeAsusOsd {
 }
 
 internal sealed class ModeToast : Form {
-    readonly string label, popupId;
-    readonly bool error;
+    readonly string label;
     readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
     readonly Stopwatch clock = new Stopwatch();
-    Image modeIcon;
     protected override bool ShowWithoutActivation { get { return true; } }
     protected override CreateParams CreateParams {
         get { CreateParams cp = base.CreateParams; cp.ExStyle |= 0x08000000 | 0x00000080 | 0x00000020; return cp; }
     }
-    internal ModeToast(string mode, bool isError, string id) {
-        label = mode; error = isError; popupId = id;
+    internal ModeToast(string message) {
+        label = message;
         FormBorderStyle = FormBorderStyle.None;
         ShowInTaskbar = false; TopMost = true; StartPosition = FormStartPosition.Manual;
         AutoScaleMode = AutoScaleMode.None; ClientSize = new Size(328, 132);
@@ -394,17 +575,10 @@ internal sealed class ModeToast : Form {
         Rectangle area = Screen.FromPoint(Cursor.Position).WorkingArea;
         Location = new Point(area.Left + (area.Width - Width) / 2, area.Bottom - Height - 56);
         using (GraphicsPath shape = Rounded(new RectangleF(0, 0, Width, Height), 14)) Region = new Region(shape);
-        string iconPath = Path.Combine(Program.Root, "icons", mode + ".png");
-        if (!isError && File.Exists(iconPath)) modeIcon = Image.FromFile(iconPath);
         timer.Interval = 30;
         timer.Tick += delegate {
-            if (popupId != null) {
-                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(Program.StateKey)) {
-                    if (key != null && (string)key.GetValue("PopupId", "") != popupId) { Close(); return; }
-                }
-            }
             double ms = clock.Elapsed.TotalMilliseconds;
-            double duration = error ? 3200 : 1900;
+            const double duration = 3200;
             if (ms >= duration) { Close(); return; }
             Opacity = Math.Min(1, Math.Min(ms / 120, (duration - ms) / 220)) * 0.97;
         };
@@ -422,18 +596,17 @@ internal sealed class ModeToast : Form {
         using (GraphicsPath outline = Rounded(new RectangleF(0.5f,0.5f,Width-1,Height-1),14)) g.DrawPath(border,outline);
         using (SolidBrush red = new SolidBrush(Color.FromArgb(237, 38, 70)))
             g.FillPolygon(red, new Point[] {new Point(25,0),new Point(118,0),new Point(110,3),new Point(25,3)});
-        if (modeIcon != null) g.DrawImage(modeIcon, new Rectangle(25, 35, 62, 62));
         using (Font small = new Font("Segoe UI", 8.5f, FontStyle.Bold))
-        using (Font title = new Font("Segoe UI", error ? 13 : 21, FontStyle.Regular))
+        using (Font title = new Font("Segoe UI", 13, FontStyle.Regular))
         using (SolidBrush muted = new SolidBrush(Color.FromArgb(153, 155, 164)))
         using (SolidBrush white = new SolidBrush(Color.FromArgb(242, 242, 242))) {
-            float x = error ? 24 : 106;
-            g.DrawString(error ? "MODE UNAVAILABLE" : "OPERATING MODE", small, muted, x, 28);
+            const float x = 24;
+            g.DrawString("MODE UNAVAILABLE", small, muted, x, 28);
             g.DrawString(label, title, white, new RectangleF(x, 48, Width-x-16, 58));
         }
     }
     protected override void Dispose(bool disposing) {
-        if (disposing) { timer.Dispose(); if (modeIcon != null) modeIcon.Dispose(); }
+        if (disposing) timer.Dispose();
         base.Dispose(disposing);
     }
 }
