@@ -1,3 +1,7 @@
 AsusMode.exe
 *.log
 *.zip
+
+# Legacy exports of the installed ASUS artwork.
+/icons/*.ico
+/icons/*.png
