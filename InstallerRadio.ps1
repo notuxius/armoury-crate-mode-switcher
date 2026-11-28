@@ -42,3 +42,39 @@ function Install-AsusRadioMenu {
     }
     Write-Output 'Radio selection installed. Hold Ctrl while opening the desktop menu once to reload Nilesoft.'
 }
+
+function Remove-AsusRadioMenu {
+    param([string]$Config, [string]$BackupFolder)
+    if (-not $Config) { return }
+
+    $folder = Split-Path -Parent $Config
+    $imports = Join-Path $folder 'imports'
+    $rule = Join-Path $imports 'asus-mode-radio.nss'
+    foreach ($path in @($folder, $imports, $Config, $rule)) {
+        $item = Get-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+        if ($item -and ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw "Nilesoft cleanup cannot follow a symbolic link or junction: $path"
+        }
+    }
+    if ((Test-Path -LiteralPath $rule) -and
+        (-not (Test-Path -LiteralPath $rule -PathType Leaf) -or
+         [IO.File]::ReadAllText($rule) -notlike '// ASUS Mode Shortcuts: radio selection*')) { return }
+
+    if (Test-Path -LiteralPath $Config -PathType Leaf) {
+        $reader = [IO.StreamReader]::new($Config, [Text.UTF8Encoding]::new($false), $true)
+        try {
+            $content = $reader.ReadToEnd()
+            $encoding = $reader.CurrentEncoding
+        } finally {
+            $reader.Dispose()
+        }
+        $import = '(?im)^[ \t]*import[ \t]+[''"]imports[/\\]asus-mode-radio\.nss[''"][ \t]*(?:\r?\n|$)'
+        $updated = $content -replace $import, ''
+        if ($updated -cne $content) {
+            $backup = Join-Path $BackupFolder ('shell-before-uninstall-' + [Guid]::NewGuid().ToString('N') + '.nss')
+            Copy-Item -LiteralPath $Config -Destination $backup
+            [IO.File]::WriteAllText($Config, $updated, $encoding)
+        }
+    }
+    if (Test-Path -LiteralPath $rule -PathType Leaf) { Remove-Item -LiteralPath $rule }
+}

@@ -20,7 +20,8 @@ using System;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 public class AsusModeSetupDialog : Form {
-    [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hwnd, int command);
+    // Windows PowerShell's Add-Type expects a declared public member.
+    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hwnd, int command);
     protected override void OnShown(EventArgs e) {
         base.OnShown(e);
         ShowWindow(Handle, 5);

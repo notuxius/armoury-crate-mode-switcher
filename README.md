@@ -30,31 +30,25 @@ Switch directly between Silent, Performance, and Turbo using keyboard shortcuts 
 - ASUS System Control Interface, Armoury Crate, and their service/hotkey components installed and initialized.
 - ASUS Optimization / AsusOSD enabled for the original popup.
 - An administrator account for setup; a suitable AC adapter for Turbo mode.
-- Windows .NET Framework compiler, used by setup to build the helper locally.
+- Windows .NET Framework, used by the prebuilt helper.
 
 The Armoury Crate app window can remain closed after initialization, but its service and UserSessionHelper must be running. Nilesoft is optional and is not installed by this project. G-Helper is not required.
 
 ## Install
 
 1. Install the ASUS prerequisites and open Armoury Crate once. Its Game Library right-click menu can remain disabled.
-2. Download the installer ZIP from the [latest GitHub release](https://github.com/notuxius/armoury-crate-mode-switcher/releases/latest) and extract the complete folder.
-3. Run `Install.cmd`, approve the Windows setup prompt, and choose **Automatic**, **Top**, or **Bottom** for the separate desktop submenu.
+2. Download `Armoury-Crate-Mode-Switcher-v*-Setup.exe` from the [latest GitHub release](https://github.com/notuxius/armoury-crate-mode-switcher/releases/latest).
+3. Sign in to the Windows administrator account that will use the shortcuts. Run the installer, approve the Windows setup prompt, and choose **Automatic**, **Top**, or **Bottom** for the separate desktop submenu.
 4. If Nilesoft is installed, hold Ctrl while right-clicking the desktop once to reload its configuration.
 5. Use the hotkeys, or right-click the desktop and open **Armoury Crate Modes**. On the default Windows 11 menu, choose **Show more options** first.
 
-To select placement without the setup selection window:
+Rerun setup to update the helper or change placement. The wizard preselects your saved position. For automation, the installer accepts `/MenuPosition=Auto`, `/MenuPosition=Top`, or `/MenuPosition=Bottom` and the standard Inno Setup silent switches.
 
-```bat
-Install.cmd -MenuPosition Auto
-Install.cmd -MenuPosition Top
-Install.cmd -MenuPosition Bottom
-```
-
-Rerun setup to update the helper or change placement. After reinstalling Windows, reinstall the ASUS prerequisites and run setup again; copying only the Start menu shortcuts is insufficient.
+To remove the utility, use **Settings → Apps → Installed apps → Armoury Crate Mode Switcher → Uninstall** from the account that installed it. If you use Nilesoft, reload its menu afterward by holding Ctrl while right-clicking the desktop.
 
 ## Build
 
-Run `Build.ps1` with Windows PowerShell. It compiles `AsusMode.cs` to a windowless `AsusMode.exe`. Setup runs this build automatically and prepares the menu icons during installation.
+Run `Build.ps1` with Windows PowerShell to compile the windowless `AsusMode.exe`. To build the release installer, install Inno Setup 6 and run `./Build-Installer.ps1 -Version 1.4.0`. The resulting installer is in `dist` and includes the compiled helper. Setup prepares the menu icons during installation.
 
 ## Selection and troubleshooting
 
@@ -75,7 +69,7 @@ Setup installs the launcher under `%LOCALAPPDATA%\Programs\Armoury Crate Mode Sw
 
 The helper executable, setup dialog, and **Armoury Crate Modes** submenu use the project's original app icon.
 
-Setup creates the Silent, Performance, and Turbo icons for the submenu and Start shortcuts from compatible mode artwork in the installed ASUS-signed `ATKOSD2Help.dll`. The release ZIP includes the project's app icon and original fallback mode icons. Setup uses the corresponding fallback if an ASUS image is unavailable. Rerun setup to refresh the mode icons after an ASUS update.
+Setup creates the Silent, Performance, and Turbo icons for the submenu and Start shortcuts from compatible mode artwork in the installed ASUS-signed `ATKOSD2Help.dll`. The installer includes the project's app icon and original fallback mode icons. Setup uses the corresponding fallback if an ASUS image is unavailable. Rerun setup to refresh the mode icons after an ASUS update.
 
 The installed ASUS software draws its own mode-switch popup.
 

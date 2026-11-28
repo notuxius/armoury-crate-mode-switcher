@@ -1,0 +1,45 @@
+name: Release installer
+
+on:
+  push:
+    tags: ['v[0-9]*.[0-9]*.[0-9]*']
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    if: github.event.created
+    runs-on: ubuntu-latest
+    outputs:
+      number: ${{ steps.tag.outputs.number }}
+    steps:
+      - name: Validate stable tag
+        id: tag
+        shell: bash
+        run: |
+          number='(0|[1-9][0-9]*)'
+          [[ "$GITHUB_REF_NAME" =~ ^v$number\.$number\.$number$ ]]
+          echo "number=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+  test:
+    needs: version
+    uses: ./.github/workflows/test.yml
+    with:
+      version: ${{ needs.version.outputs.number }}
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: installer
+      - name: Publish the tested installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tagged_commit=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_REF_NAME" --jq '.sha')
+          test "$tagged_commit" = "$GITHUB_SHA"
+          gh release create "$GITHUB_REF_NAME" "Armoury-Crate-Mode-Switcher-$GITHUB_REF_NAME-Setup.exe" \
+            --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes

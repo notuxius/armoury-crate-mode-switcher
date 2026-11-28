@@ -84,7 +84,7 @@ project's original app icon in icons\App.ico.
 
 Setup reads the THROTTLEGEAR_*6 PNG resources in the ASUS-signed ATKOSD2Help.dll
 installed by ASUS System Control Interface. It generates multi-size ICOs locally
-for the individual mode entries in the submenu and Start. The release ZIP
+for the individual mode entries in the submenu and Start. The installer
 includes the app icon and original fallback mode icons in icons\Fallback.
 Setup uses the corresponding fallback if an ASUS image is unavailable. Rerun
 setup to refresh the mode icons after an ASUS software update.
@@ -94,13 +94,13 @@ The installed DLL identifies ASUSTeK COMPUTER INC. as its copyright holder.
 The artwork read from it is subject to the applicable ASUS software license.
 
 INSTALLATION AND WINDOWS REINSTALL
-1. Download the installer ZIP from the GitHub releases page and keep a backup.
+1. Download the Setup.exe asset from the GitHub releases page and keep a backup.
    https://github.com/notuxius/armoury-crate-mode-switcher/releases/latest
 2. Install the ASUS System Control Interface driver and Armoury Crate for the
    laptop, including its service and ASUS hotkey/OSD components. Restart if asked.
 3. Open Armoury Crate once. Its Game Library right-click menu can stay disabled.
-4. Extract the whole ZIP. Sign in to the Windows administrator account that
-   will use these shortcuts. Run Install.cmd and approve Windows' one-time
+4. Sign in to the Windows administrator account that will use these shortcuts.
+   Run the setup executable and approve Windows' one-time
    setup prompt. Setup also supports updates of an existing installation.
    Choose Automatic, Top, or Bottom in the setup window, then click Install. Setup remembers
    your selection for the next installation. Cancel leaves the installed menu
@@ -110,15 +110,16 @@ INSTALLATION AND WINDOWS REINSTALL
    The helper retries keys that are temporarily unavailable.
 
 Copying only .lnk shortcuts is insufficient. Setup recreates their scheduled
-tasks and support files. The extracted folder is not required after installation.
+tasks and support files.
 Setup checks for ASUS hardware, 64-bit Windows, the running Armoury Crate
 service/session endpoint and published operating-mode capabilities. It does not
 require an exact model. This is not a universal fan controller: incompatible
 service interfaces are rejected, and unavailable modes are rejected per request.
 The ASUS OSD is optional at runtime and may differ across ASUS software versions.
 
-For installation without the position dialog, use Setup.ps1 -MenuPosition Auto,
-Setup.ps1 -MenuPosition Top, or Setup.ps1 -MenuPosition Bottom. Install.cmd accepts the same argument.
+The installer accepts /MenuPosition=Auto, /MenuPosition=Top, or
+/MenuPosition=Bottom to skip the placement page. For unattended setup, use
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART. It uses the saved position by default.
 The one-time Windows elevation prompt may still appear during installation.
 
 IMPLEMENTATION AND DIAGNOSTICS
@@ -136,8 +137,8 @@ helper is absent. They have no automatic triggers and are not used for normal
 switches. No shell or script interpreter runs during daily use, and no G-Helper
 or additional third-party app is required.
 
-Setup builds the windowless helper with the Windows .NET Framework compiler,
-protects the installed files, and creates the tasks and shortcuts. It uses
+The installer includes a windowless helper built for Windows .NET Framework.
+Setup protects the installed files and creates the tasks and shortcuts. It uses
 native 64-bit Windows PowerShell. Setup requires
 the initialized Armoury Crate service endpoint and its published mode state.
 Setup confirms the installed watcher has registered all three hotkeys.
@@ -158,6 +159,14 @@ watcher-error.txt: watcher, menu, and diagnostics errors.
 The diagnostic's exit code 0 confirms that the native popup window was visible.
 
 REMOVAL
+Sign in to the Windows account that installed the utility. Open Settings,
+choose Apps > Installed apps > Armoury Crate Mode Switcher and select Uninstall.
+If you use Nilesoft, hold Ctrl while opening the desktop context menu once
+after removal. Diagnostic logs and Nilesoft configuration backups remain on disk.
+
+For an older installation made with Install.cmd, upgrade with the new installer
+to register it in Installed apps. For manual removal of a legacy installation:
+
 Open Task Scheduler as administrator, end and delete ASUS Mode Checkmark
 Watcher, then delete these three tasks from the
 Task Scheduler Library: ASUS Silent Mode, ASUS Performance Mode, ASUS Turbo Mode.

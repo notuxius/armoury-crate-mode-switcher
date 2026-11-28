@@ -1,10 +1,13 @@
-param([ValidateSet('Auto','Top','Bottom')][string]$MenuPosition)
+param([ValidateSet('Auto','Top','Bottom')][string]$MenuPosition, [switch]$Packaged, [switch]$CheckOnly)
 $ErrorActionPreference = 'Stop'
 $asusPositionArgument = if ($MenuPosition) { ' -MenuPosition ' + $MenuPosition } else { '' }
+$asusSetupArguments = '-NoProfile -NonInteractive -STA -ExecutionPolicy Bypass -File "' + $PSCommandPath + '"' + $asusPositionArgument
+if ($Packaged) { $asusSetupArguments += ' -Packaged' }
+if ($CheckOnly) { $asusSetupArguments += ' -CheckOnly' }
 # Use the native Windows registry and task tools even from a 32-bit launcher.
 if ([Environment]::Is64BitOperatingSystem -and -not [Environment]::Is64BitProcess) {
     $asusNativePowerShell = Join-Path $env:SystemRoot 'Sysnative\WindowsPowerShell\v1.0\powershell.exe'
-    $asusNativeSetup = Start-Process -FilePath $asusNativePowerShell -WindowStyle Hidden -Wait -PassThru -ArgumentList ('-NoProfile -NonInteractive -STA -ExecutionPolicy Bypass -File "' + $PSCommandPath + '"' + $asusPositionArgument)
+    $asusNativeSetup = Start-Process -FilePath $asusNativePowerShell -WindowStyle Hidden -Wait -PassThru -ArgumentList $asusSetupArguments
     exit $asusNativeSetup.ExitCode
 }
 $asusSetupLogFolder = Join-Path $env:LOCALAPPDATA 'ASUS Mode Shortcuts'
@@ -19,18 +22,33 @@ try {
     $asusPrincipalCheck = New-Object Security.Principal.WindowsPrincipal($asusIdentity)
     $asusPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
     if (-not $asusPrincipalCheck.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-        $asusSetupProcess = Start-Process -FilePath $asusPowerShell -Verb RunAs -WindowStyle Hidden -Wait -PassThru -ArgumentList ('-NoProfile -NonInteractive -STA -ExecutionPolicy Bypass -File "' + $PSCommandPath + '"' + $asusPositionArgument)
+        $asusSetupProcess = Start-Process -FilePath $asusPowerShell -Verb RunAs -WindowStyle Hidden -Wait -PassThru -ArgumentList $asusSetupArguments
         exit $asusSetupProcess.ExitCode
     }
 
+    $asusInstallKey = 'HKLM:\SOFTWARE\Armoury Crate Mode Switcher'
+    $asusInstallRecord = Get-ItemProperty -LiteralPath $asusInstallKey -ErrorAction SilentlyContinue
+    if ($asusInstallRecord.OwnerSid -and $asusInstallRecord.OwnerSid -ne $asusIdentity.User.Value) {
+        throw 'Sign in to the Windows account that installed Armoury Crate Mode Switcher before running setup.'
+    }
+    if ($Packaged) {
+        if (-not $MenuPosition) { throw 'The installer did not supply a menu position.' }
+        foreach ($asusPayloadFile in @('AsusMode.exe','asus-mode-radio.nss','icons\Fallback\Silent.ico','icons\Fallback\Performance.ico','icons\Fallback\Turbo.ico')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot $asusPayloadFile) -PathType Leaf)) {
+                throw "The installer payload is missing $asusPayloadFile."
+            }
+        }
+    }
     $asusComputer = Get-CimInstance Win32_ComputerSystem
     if (-not [Environment]::Is64BitOperatingSystem -or $asusComputer.Manufacturer -notmatch 'ASUS|ASUSTeK') {
         throw 'This package requires 64-bit Windows on an ASUS computer with compatible Armoury Crate operating modes.'
     }
-    $asusBuildScript = Join-Path $PSScriptRoot 'Build.ps1'
-    if (-not (Test-Path -LiteralPath $asusBuildScript)) { throw 'Extract the complete ZIP before running Install.cmd.' }
-    & $asusPowerShell -NoProfile -NonInteractive -STA -ExecutionPolicy Bypass -File $asusBuildScript
-    if ($LASTEXITCODE -ne 0) { throw 'Could not build the windowless mode helper.' }
+    if (-not $Packaged) {
+        $asusBuildScript = Join-Path $PSScriptRoot 'Build.ps1'
+        if (-not (Test-Path -LiteralPath $asusBuildScript)) { throw 'Extract the complete source tree or use the installer from GitHub Releases.' }
+        & $asusPowerShell -NoProfile -NonInteractive -STA -ExecutionPolicy Bypass -File $asusBuildScript
+        if ($LASTEXITCODE -ne 0) { throw 'Could not build the windowless mode helper.' }
+    }
     $asusSourceExe = Join-Path $PSScriptRoot 'AsusMode.exe'
     $asusServiceCheck = Start-Process -FilePath $asusSourceExe -ArgumentList '--check' -Wait -PassThru -WindowStyle Hidden
     if ($asusServiceCheck.ExitCode -ne 0) { throw 'A compatible Armoury Crate operating-mode service is required. Start the service and open Armoury Crate once, then rerun setup. See last-result.txt for the compatibility check result.' }
@@ -47,6 +65,17 @@ try {
     if ($asusExistingWatcher -and (@($asusExistingWatcher.Actions).Count -ne 1 -or
         $asusExistingWatcher.Actions[0].Execute -ne $asusHelper -or $asusExistingWatcher.Actions[0].Arguments -ne '--watch')) {
         throw 'An unrelated task already uses the checkmark watcher name.'
+    }
+    if ($Packaged -and $asusExistingWatcher) {
+        $asusWatcherAccount = $asusExistingWatcher.Principal.UserId
+        $asusWatcherSid = if ($asusWatcherAccount -like 'S-1-*') {
+            $asusWatcherAccount
+        } else {
+            ([Security.Principal.NTAccount]::new($asusWatcherAccount)).Translate([Security.Principal.SecurityIdentifier]).Value
+        }
+        if ($asusWatcherSid -ne $asusIdentity.User.Value) {
+            throw 'Sign in to the Windows account that uses the existing Armoury Crate Mode Switcher shortcuts before upgrading.'
+        }
     }
     $asusDesktop = [Environment]::GetFolderPath('Desktop')
     $asusStartFolder = Join-Path ([Environment]::GetFolderPath('Programs')) 'ASUS Mode Shortcuts'
@@ -133,9 +162,23 @@ try {
     if (Test-Path -LiteralPath $asusUserLauncher -PathType Container) {
         throw "A folder already uses the launcher filename: $asusUserLauncher"
     }
-    New-Item -ItemType Directory -Path $asusUserApp -Force | Out-Null
-    Copy-Item -LiteralPath $asusSourceExe -Destination $asusUserLauncher -Force
+    $asusSupportInfo = Get-Item -LiteralPath $asusSupportDir -Force -ErrorAction SilentlyContinue
+    if ($asusSupportInfo -and (-not $asusSupportInfo.PSIsContainer -or
+        ($asusSupportInfo.Attributes -band [IO.FileAttributes]::ReparsePoint))) {
+        throw 'The support folder must be a directory and must not be a symbolic link or junction.'
+    }
+    if ($CheckOnly) {
+        Add-Content -LiteralPath $asusSetupLog -Value ('PREFLIGHT ' + (Get-Date -Format o))
+        exit 0
+    }
 
+    if ($Packaged) {
+        if (-not (Test-Path -LiteralPath $asusInstallKey)) { New-Item -Path $asusInstallKey | Out-Null }
+        New-ItemProperty -LiteralPath $asusInstallKey -Name OwnerSid -Value $asusIdentity.User.Value -PropertyType String -Force | Out-Null
+        if ($asusRadioConfig) {
+            New-ItemProperty -LiteralPath $asusInstallKey -Name NilesoftConfig -Value $asusRadioConfig -PropertyType String -Force | Out-Null
+        }
+    }
     if (-not (Test-Path -LiteralPath $asusSupportDir)) {
         New-Item -ItemType Directory -Path $asusSupportDir | Out-Null
     }
@@ -152,6 +195,8 @@ try {
         $asusAcl.AddAccessRule($asusRule)
     }
     Set-Acl -LiteralPath $asusSupportDir -AclObject $asusAcl
+    New-Item -ItemType Directory -Path $asusUserApp -Force | Out-Null
+    Copy-Item -LiteralPath $asusSourceExe -Destination $asusUserLauncher -Force
     if ($asusExistingWatcher -and $asusExistingWatcher.State -in @('Running','Queued')) {
         Start-Process -FilePath $asusSourceExe -ArgumentList '--stop-watch' -WindowStyle Hidden -Wait
         $asusStopTime = [Diagnostics.Stopwatch]::StartNew()
@@ -294,8 +339,11 @@ public static class AsusModeLinkRefresh {
     $asusSetupError = $_.Exception.Message
     Add-Content -LiteralPath $asusSetupLog -Value ('FAILED ' + (Get-Date -Format o) + ' ' + ($_ | Out-String))
     [Console]::Error.WriteLine($asusSetupError)
-    # Setup errors remain visible even if setup was elevated in a hidden window.
-    Add-Type -AssemblyName System.Windows.Forms
-    [void][System.Windows.Forms.MessageBox]::Show($asusSetupError, 'ASUS shortcut setup failed')
+    if ($Packaged) {
+        Set-Content -LiteralPath (Join-Path $PSScriptRoot 'setup-error.txt') -Value $asusSetupError -Encoding UTF8
+    } else {
+        Add-Type -AssemblyName System.Windows.Forms
+        [void][System.Windows.Forms.MessageBox]::Show($asusSetupError, 'ASUS shortcut setup failed')
+    }
     exit 1
 }

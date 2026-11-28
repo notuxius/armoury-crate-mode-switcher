@@ -1,0 +1,36 @@
+name: Test installer
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    env:
+      APP_VERSION: ${{ inputs.version || '0.0.0' }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Build Inno Setup executable
+        shell: powershell
+        run: ./Build-Installer.ps1 -Version $env:APP_VERSION
+      - name: Test package and uninstall cleanup
+        shell: powershell
+        run: ./.github/scripts/Test-Installer.ps1 -Version $env:APP_VERSION -UnsupportedHardware
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: installer
+          path: dist/Armoury-Crate-Mode-Switcher-v${{ env.APP_VERSION }}-Setup.exe
+          if-no-files-found: error
