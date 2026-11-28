@@ -5,3 +5,4 @@ AsusMode.exe
 # Legacy exports of the installed ASUS artwork.
 /icons/*.ico
 /icons/*.png
+!/icons/App.ico

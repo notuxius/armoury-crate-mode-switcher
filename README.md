@@ -1,6 +1,6 @@
 # Armoury Crate Mode Switcher
 
-An independent, unofficial utility for ASUS Armoury Crate.
+**Unofficial project.** This utility is independently maintained and has no affiliation, sponsorship, or endorsement from ASUS. References to ASUS and Armoury Crate identify the hardware and software it works with.
 
 Switch directly between Silent, Performance, and Turbo using keyboard shortcuts or a separate **Armoury Crate Modes** desktop context menu. Requests go through Armoury Crate's service so its operating-mode selection stays in sync.
 
@@ -73,10 +73,12 @@ Support files are installed under `%ProgramData%\ASUS Mode Shortcuts`. Full impl
 
 ## Menu icons and ASUS popup
 
-Setup creates the menu and Start icons locally from compatible mode artwork in the installed ASUS-signed `ATKOSD2Help.dll`. The release ZIP contains only the project's original fallback icons. Setup uses the corresponding fallback if an ASUS image is unavailable. Rerun setup to refresh the icons after an ASUS update.
+The helper executable, setup dialog, and **Armoury Crate Modes** submenu use the project's original app icon.
 
-The installed ASUS software draws its own mode-switch popup. This project is not affiliated with or endorsed by ASUS.
+Setup creates the Silent, Performance, and Turbo icons for the submenu and Start shortcuts from compatible mode artwork in the installed ASUS-signed `ATKOSD2Help.dll`. The release ZIP includes the project's app icon and original fallback mode icons. Setup uses the corresponding fallback if an ASUS image is unavailable. Rerun setup to refresh the mode icons after an ASUS update.
+
+The installed ASUS software draws its own mode-switch popup.
 
 ## License
 
-The utility’s original code and fallback icons are available under the [MIT License](LICENSE). The installed DLL identifies ASUSTeK COMPUTER INC. as its copyright holder. The artwork read from it is subject to the applicable ASUS software license.
+The utility’s original code and icons are available under the [MIT License](LICENSE). The installed DLL identifies ASUSTeK COMPUTER INC. as its copyright holder. The artwork read from it is subject to the applicable ASUS software license.

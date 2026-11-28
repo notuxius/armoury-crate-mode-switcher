@@ -208,7 +208,7 @@ public static class AsusModeLinkRefresh {
     New-Item -Path $asusMenuRoot -Force | Out-Null
     New-ItemProperty -LiteralPath $asusMenuRoot -Name ASUSModeShortcuts -Value '1' -PropertyType String -Force | Out-Null
     New-ItemProperty -LiteralPath $asusMenuRoot -Name MUIVerb -Value 'Armoury Crate Modes' -PropertyType String -Force | Out-Null
-    New-ItemProperty -LiteralPath $asusMenuRoot -Name Icon -Value ((Join-Path $asusInstalledIcons 'Performance-menu-asus6.ico') + ',0') -PropertyType String -Force | Out-Null
+    New-ItemProperty -LiteralPath $asusMenuRoot -Name Icon -Value ($asusHelper + ',0') -PropertyType String -Force | Out-Null
     New-ItemProperty -LiteralPath $asusMenuRoot -Name SubCommands -Value 'ASUSModeShortcuts.Silent;ASUSModeShortcuts.Performance;ASUSModeShortcuts.Turbo' -PropertyType String -Force | Out-Null
     if ($MenuPosition -eq 'Auto') {
         Remove-ItemProperty -LiteralPath $asusMenuRoot -Name Position -ErrorAction SilentlyContinue

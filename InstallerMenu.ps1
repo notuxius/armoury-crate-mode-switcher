@@ -31,7 +31,10 @@ public class AsusModeSetupDialog : Form {
     }
     [Windows.Forms.Application]::EnableVisualStyles()
     $form = New-Object AsusModeSetupDialog
+    $formIcon = $null
     try {
+        $formIcon = [Drawing.Icon]::new((Join-Path $PSScriptRoot 'icons\App.ico'))
+        $form.Icon = $formIcon
         $form.Text = 'Armory Crate Mode - Setup'
         $form.Font = New-Object Drawing.Font('Segoe UI', 10)
         $form.AutoScaleDimensions = New-Object Drawing.SizeF(96,96)
@@ -83,5 +86,8 @@ public class AsusModeSetupDialog : Form {
         if ($auto.Checked) { return 'Auto' }
         if ($bottom.Checked) { return 'Bottom' }
         return 'Top'
-    } finally { $form.Dispose() }
+    } finally {
+        $form.Dispose()
+        if ($formIcon) { $formIcon.Dispose() }
+    }
 }

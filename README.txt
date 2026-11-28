@@ -1,6 +1,10 @@
 ASUS MODE SHORTCUTS - ARMOURY CRATE SERVICE EDITION
 
-An independent, unofficial utility for ASUS Armoury Crate.
+UNOFFICIAL PROJECT
+This utility is independently maintained and has no affiliation, sponsorship,
+or endorsement from ASUS. References to ASUS and Armoury Crate identify the
+hardware and software it works with.
+
 For ASUS laptops with compatible Armoury Crate operating-mode services.
 Tested on ASUS ROG Zephyrus M16 GU604VZ; other models are not independently tested.
 
@@ -75,14 +79,17 @@ only after the service confirms the selected mode. No imitation popup is used.
 ASUS Optimization / AsusOSD must remain enabled to display it.
 The popup uses its own ASUS resources, not images in this package.
 
+The helper executable, setup dialog, and Armoury Crate Modes submenu use the
+project's original app icon in icons\App.ico.
+
 Setup reads the THROTTLEGEAR_*6 PNG resources in the ASUS-signed ATKOSD2Help.dll
 installed by ASUS System Control Interface. It generates multi-size ICOs locally
-for the context menu and Start entries. The release ZIP contains only the
-project's original fallback icons in icons\Fallback. Setup uses the corresponding
-fallback if an ASUS image is unavailable. Rerun setup to refresh the menu icons
-after an ASUS software update.
+for the individual mode entries in the submenu and Start. The release ZIP
+includes the app icon and original fallback mode icons in icons\Fallback.
+Setup uses the corresponding fallback if an ASUS image is unavailable. Rerun
+setup to refresh the mode icons after an ASUS software update.
 
-The original code and fallback icons are covered by the MIT License in LICENSE.
+The original code and icons are covered by the MIT License in LICENSE.
 The installed DLL identifies ASUSTeK COMPUTER INC. as its copyright holder.
 The artwork read from it is subject to the applicable ASUS software license.
 
