@@ -1,8 +1,10 @@
 # Armoury Crate Mode Switcher
 
+An independent, unofficial utility for ASUS Armoury Crate.
+
 Switch directly between Silent, Performance, and Turbo using keyboard shortcuts or a separate **Armoury Crate Modes** desktop context menu. Requests go through Armoury Crate's service so its operating-mode selection stays in sync.
 
-**For ASUS laptops whose Armoury Crate service exposes compatible operating modes.** Setup checks the ASUS manufacturer, 64-bit Windows, the running service and session endpoint, and published mode capabilities instead of requiring an exact model. Tested on the ROG Zephyrus M16 GU604VZ; other models have not yet been independently tested. This is an unofficial utility and uses an undocumented ASUS interface, which may change with ASUS updates.
+**For ASUS laptops whose Armoury Crate service exposes compatible operating modes.** Setup checks the ASUS manufacturer, 64-bit Windows, the running service and session endpoint, and published mode capabilities instead of requiring an exact model. Tested on the ROG Zephyrus M16 GU604VZ; other models have not yet been independently tested. The utility uses an undocumented ASUS interface, which may change with ASUS updates.
 
 ## Features
 
@@ -71,10 +73,10 @@ Support files are installed under `%ProgramData%\ASUS Mode Shortcuts`. Full impl
 
 ## Menu icons and ASUS popup
 
-Setup uses the compatible mode artwork in the ASUS-signed `ATKOSD2Help.dll` installed on the computer. It creates the menu and Start icons locally. If an ASUS image is unavailable, setup uses the corresponding original fallback icon shipped with the project. Rerun setup to refresh the icons after an ASUS update.
+Setup creates the menu and Start icons locally from compatible mode artwork in the installed ASUS-signed `ATKOSD2Help.dll`. The release ZIP contains only the project's original fallback icons. Setup uses the corresponding fallback if an ASUS image is unavailable. Rerun setup to refresh the icons after an ASUS update.
 
 The installed ASUS software draws its own mode-switch popup. This project is not affiliated with or endorsed by ASUS.
 
 ## License
 
-The utility’s original code and fallback icons are available under the [MIT License](LICENSE). ASUS artwork read from the installed DLL remains subject to ASUS’s terms.
+The utility’s original code and fallback icons are available under the [MIT License](LICENSE). The installed DLL identifies ASUSTeK COMPUTER INC. as its copyright holder. The artwork read from it is subject to the applicable ASUS software license.
