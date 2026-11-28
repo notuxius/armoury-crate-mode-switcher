@@ -72,3 +72,7 @@ Support files are installed under `%ProgramData%\ASUS Mode Shortcuts`. Full impl
 ## ASUS artwork
 
 Popup artwork is rendered by the installed ASUS software. The saved menu icons are ASUS artwork; their origin and resource names are documented in [icons/ASSETS.txt](icons/ASSETS.txt). These assets remain the property of their respective owner and do not automatically update when ASUS changes its icons. This project is not affiliated with or endorsed by ASUS.
+
+## License
+
+The utility’s original code is available under the [MIT License](LICENSE). The extracted ASUS PNGs and the ICOs generated from them remain subject to ASUS’s terms. Their provenance is documented in [icons/ASSETS.txt](icons/ASSETS.txt).
