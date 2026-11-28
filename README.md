@@ -52,7 +52,7 @@ Rerun setup to update the helper or change placement. After reinstalling Windows
 
 ## Build
 
-Run `Build.ps1` with Windows PowerShell. It compiles `AsusMode.cs` to a windowless `AsusMode.exe` and regenerates the menu ICO files from the supplied PNGs. Setup runs this build automatically; a precompiled executable is not tracked in Git.
+Run `Build.ps1` with Windows PowerShell. It compiles `AsusMode.cs` to a windowless `AsusMode.exe`. Setup runs this build automatically and prepares the menu icons during installation.
 
 ## Selection and troubleshooting
 
@@ -69,10 +69,12 @@ Other applications can reserve the same keyboard shortcuts. The helper retries u
 
 Support files are installed under `%ProgramData%\ASUS Mode Shortcuts`. Full implementation notes, diagnostic commands, and removal instructions are in [README.txt](README.txt).
 
-## ASUS artwork
+## Menu icons and ASUS popup
 
-Popup artwork is rendered by the installed ASUS software. The saved menu icons are ASUS artwork; their origin and resource names are documented in [icons/ASSETS.txt](icons/ASSETS.txt). These assets remain the property of their respective owner and do not automatically update when ASUS changes its icons. This project is not affiliated with or endorsed by ASUS.
+Setup uses the compatible mode artwork in the ASUS-signed `ATKOSD2Help.dll` installed on the computer. It creates the menu and Start icons locally. If an ASUS image is unavailable, setup uses the corresponding original fallback icon shipped with the project. Rerun setup to refresh the icons after an ASUS update.
+
+The installed ASUS software draws its own mode-switch popup. This project is not affiliated with or endorsed by ASUS.
 
 ## License
 
-The utility’s original code is available under the [MIT License](LICENSE). The extracted ASUS PNGs and the ICOs generated from them remain subject to ASUS’s terms. Their provenance is documented in [icons/ASSETS.txt](icons/ASSETS.txt).
+The utility’s original code and fallback icons are available under the [MIT License](LICENSE). ASUS artwork read from the installed DLL remains subject to ASUS’s terms.

@@ -58,6 +58,7 @@ try {
     }
     . (Join-Path $PSScriptRoot 'InstallerMenu.ps1')
     . (Join-Path $PSScriptRoot 'InstallerRadio.ps1')
+    . (Join-Path $PSScriptRoot 'InstallerIcons.ps1')
     $asusRadioConfig = Get-AsusRadioConfig
     if (-not $MenuPosition) {
         $asusPreviousPosition = 'Auto'
@@ -155,12 +156,7 @@ try {
     Copy-Item -LiteralPath $asusSourceExe -Destination $asusHelper -Force
     $asusInstalledIcons = Join-Path $asusSupportDir 'icons'
     New-Item -ItemType Directory -Path $asusInstalledIcons -Force | Out-Null
-    foreach ($asusMode in $asusModes) {
-        foreach ($asusExtension in @('.png','.ico')) {
-            $asusInstalledIconName = if ($asusExtension -eq '.ico') { $asusMode.Name + '-menu-asus6.ico' } else { $asusMode.Name + $asusExtension }
-            Copy-Item -LiteralPath (Join-Path $PSScriptRoot ('icons\' + $asusMode.Name + $asusExtension)) -Destination (Join-Path $asusInstalledIcons $asusInstalledIconName) -Force
-        }
-    }
+    Install-AsusModeIcons -Destination $asusInstalledIcons
     if (-not (Test-Path -LiteralPath $asusStartFolder)) {
         New-Item -ItemType Directory -Path $asusStartFolder | Out-Null
     }
@@ -267,6 +263,10 @@ public static class AsusModeLinkRefresh {
     foreach ($asusOldFile in @('Set-Mode.ps1','Silent.vbs','Performance.vbs','Turbo.vbs')) {
         $asusOldFilePath = Join-Path $asusSupportDir $asusOldFile
         if (Test-Path -LiteralPath $asusOldFilePath) { Remove-Item -LiteralPath $asusOldFilePath }
+    }
+    foreach ($asusMode in $asusModes) {
+        $asusOldPng = Join-Path $asusInstalledIcons ($asusMode.Name + '.png')
+        if (Test-Path -LiteralPath $asusOldPng -PathType Leaf) { Remove-Item -LiteralPath $asusOldPng }
     }
     [AsusModeLinkRefresh]::SHChangeNotify(0x08000000, 0, $null, [IntPtr]::Zero)
     Write-Output 'Ready: desktop right-click > Show more options (if shown) > Armoury Crate Modes > Silent / Performance / Turbo.'

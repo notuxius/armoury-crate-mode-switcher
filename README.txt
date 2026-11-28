@@ -44,7 +44,7 @@ This is an undocumented ASUS interface; future ASUS updates may need changes.
 MENU CHECKMARK
 With Nilesoft Shell 1.9 or later already installed, the selected mode has a
 radio dot in the left selection column, just like the desktop View menu.
-The ASUS icons stay beside the labels; the trailing text checkmark is hidden.
+The installed icons stay beside the labels; the trailing text checkmark is hidden.
 Setup adds one import for imports/asus-mode-radio.nss to Nilesoft's shell.nss,
 backing up the previous config in the support folder. It does not install
 Nilesoft or add the retired ASUS Mode root-menu cleanup rule.
@@ -66,7 +66,7 @@ firmware telemetry. Changes made directly by a third-party driver tool cannot
 be detected reliably. Polling only reads state; mode changes occur only in
 response to an explicit hotkey, menu or Start-entry request.
 
-ORIGINAL ASUS POPUP AND ICONS
+NATIVE ASUS POPUP AND MENU ICONS
 The installed ASUS AsusOSD component draws the popup with its built-in artwork,
 layout and animation. If a service popup was observed during the request, the
 helper does not request another. Otherwise it requests the original popup
@@ -74,11 +74,11 @@ only after the service confirms the selected mode. No imitation popup is used.
 ASUS Optimization / AsusOSD must remain enabled to display it.
 The popup uses its own ASUS resources, not images in this package.
 
-The icons folder contains original ASUS THROTTLEGEAR_*6 PNG artwork and gray
-multi-size ICO conversions for the menu and Start entries. Build.ps1 regenerates
-the ICOs from the PNGs, preserving transparency. ASSETS.txt records their source.
-These saved menu icons do not automatically change with ASUS software updates.
-They remain ASUS artwork included in this personal setup package.
+Setup reads the THROTTLEGEAR_*6 PNG resources in the ASUS-signed ATKOSD2Help.dll
+installed by ASUS System Control Interface. It generates multi-size ICOs locally
+for the context menu and Start entries. If a resource cannot be used, setup
+installs the corresponding original fallback ICO from icons\Fallback. Rerun
+setup to refresh the menu icons after an ASUS software update.
 
 INSTALLATION AND WINDOWS REINSTALL
 1. Download the installer ZIP from the GitHub releases page and keep a backup.

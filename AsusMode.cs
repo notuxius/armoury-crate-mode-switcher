@@ -143,7 +143,7 @@ internal static class ModeMenu {
             using (RegistryKey entry = Registry.LocalMachine.OpenSubKey(
                 @"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell\ASUSModeShortcuts." + mode, true)) {
                 if (entry == null || (string)entry.GetValue("ASUSModeShortcuts", "") != "1") continue;
-                // Keep ASUS icons; the checkmark is alongside the selected mode's label.
+                // Keep the installed icon; the checkmark is alongside the selected mode's label.
                 // This reflects Armoury Crate service state, not raw firmware telemetry.
                 string label = mode == selected ? mode + "  \u2713" : mode;
                 if (!String.Equals(entry.GetValue("MUIVerb") as string, label)) entry.SetValue("MUIVerb", label);
