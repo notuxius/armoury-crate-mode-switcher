@@ -122,7 +122,8 @@ Setup.ps1 -MenuPosition Top, or Setup.ps1 -MenuPosition Bottom. Install.cmd acce
 The one-time Windows elevation prompt may still appear during installation.
 
 IMPLEMENTATION AND DIAGNOSTICS
-Support files: C:\ProgramData\ASUS Mode Shortcuts.
+Start menu launcher: %LOCALAPPDATA%\Programs\Armoury Crate Mode Switcher.
+Elevated background helper and support files: %ProgramData%\ASUS Mode Shortcuts.
 The ASUS Mode Checkmark Watcher task starts --watch at login. The resident
 helper registers Ctrl+Alt+S/P/T directly with Windows. Start links and menu
 entries use --request to signal its per-user, per-session request slot. The
@@ -160,8 +161,9 @@ REMOVAL
 Open Task Scheduler as administrator, end and delete ASUS Mode Checkmark
 Watcher, then delete these three tasks from the
 Task Scheduler Library: ASUS Silent Mode, ASUS Performance Mode, ASUS Turbo Mode.
-Delete ASUS Mode Shortcuts from the current user's Start menu Programs folder
-and the ASUS Mode Shortcuts support folder under ProgramData.
+Delete ASUS Mode Shortcuts from the current user's Start menu Programs folder,
+Armoury Crate Mode Switcher from %LOCALAPPDATA%\Programs, and the ASUS Mode
+Shortcuts support folder under ProgramData.
 To remove the modes submenu, delete this package-owned key:
 HKEY_LOCAL_MACHINE\Software\Classes\Directory\Background\shell\ArmouryCrateModes
 It has the ASUSModeShortcuts ownership marker and title Armoury Crate Modes.

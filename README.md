@@ -69,7 +69,7 @@ Logs are stored under `%LOCALAPPDATA%\ASUS Mode Shortcuts`:
 
 Other applications can reserve the same keyboard shortcuts. The helper retries unavailable hotkeys. The separate modes menu does not depend on ASUS maintaining its Game Library menu registration.
 
-Support files are installed under `%ProgramData%\ASUS Mode Shortcuts`. Full implementation notes, diagnostic commands, and removal instructions are in [README.txt](README.txt).
+Setup installs the launcher under `%LOCALAPPDATA%\Programs\Armoury Crate Mode Switcher` and creates Silent, Performance, and Turbo shortcuts under **Start → ASUS Mode Shortcuts**. The elevated background helper and its support files stay under `%ProgramData%\ASUS Mode Shortcuts`. Full implementation notes, diagnostic commands, and removal instructions are in [README.txt](README.txt).
 
 ## Menu icons and ASUS popup
 

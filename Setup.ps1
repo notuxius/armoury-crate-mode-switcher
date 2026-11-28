@@ -39,6 +39,9 @@ try {
     $asusSupportDir = Join-Path $env:ProgramData 'ASUS Mode Shortcuts'
     $asusTaskScript = Join-Path $asusSupportDir 'Set-Mode.ps1'
     $asusHelper = Join-Path $asusSupportDir 'AsusMode.exe'
+    $asusUserPrograms = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Programs'
+    $asusUserApp = Join-Path $asusUserPrograms 'Armoury Crate Mode Switcher'
+    $asusUserLauncher = Join-Path $asusUserApp 'AsusMode.exe'
     $asusWatcherName = 'ASUS Mode Checkmark Watcher'
     $asusExistingWatcher = Get-ScheduledTask -TaskName $asusWatcherName -TaskPath '\' -ErrorAction SilentlyContinue
     if ($asusExistingWatcher -and (@($asusExistingWatcher.Actions).Count -ne 1 -or
@@ -112,7 +115,7 @@ try {
             $asusOldLink = $asusExistingLink.TargetPath -eq $asusWscript -and
                 ($asusExistingLink.Arguments -like ('*"' + $asusKnownLauncher + '"*') -or
                  ($asusMode.Name -eq 'Silent' -and $asusExistingLink.Arguments -like ('*"' + $asusOldLauncher + '"*')))
-            $asusNewLink = $asusExistingLink.TargetPath -eq $asusHelper -and
+            $asusNewLink = $asusExistingLink.TargetPath -in @($asusHelper, $asusUserLauncher) -and
                 $asusExistingLink.Arguments -eq ('--request ' + $asusMode.Name)
             if (-not $asusOldLink -and -not $asusNewLink) {
                 throw "An unrelated shortcut is named $asusTaskName. Nothing has been replaced."
@@ -120,6 +123,18 @@ try {
         }
         }
     }
+
+    foreach ($asusUserPath in @($asusUserPrograms, $asusUserApp, $asusUserLauncher)) {
+        $asusExistingPath = Get-Item -LiteralPath $asusUserPath -Force -ErrorAction SilentlyContinue
+        if ($asusExistingPath -and ($asusExistingPath.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw "The launcher path must not go through a symbolic link or junction: $asusUserPath"
+        }
+    }
+    if (Test-Path -LiteralPath $asusUserLauncher -PathType Container) {
+        throw "A folder already uses the launcher filename: $asusUserLauncher"
+    }
+    New-Item -ItemType Directory -Path $asusUserApp -Force | Out-Null
+    Copy-Item -LiteralPath $asusSourceExe -Destination $asusUserLauncher -Force
 
     if (-not (Test-Path -LiteralPath $asusSupportDir)) {
         New-Item -ItemType Directory -Path $asusSupportDir | Out-Null
@@ -176,9 +191,9 @@ public static class AsusModeLinkRefresh {
         Register-ScheduledTask -TaskName $asusTaskName -TaskPath '\' -Action $asusAction -Principal $asusPrincipal -Settings $asusSettings -Description ('On-demand ASUS ' + $asusMode.Name + ' mode. ASUS Mode Shortcuts package; no automatic triggers.') -Force | Out-Null
         $asusShortcutPath = Join-Path $asusStartFolder ($asusTaskName + '.lnk')
         $asusShortcut = $asusShell.CreateShortcut($asusShortcutPath)
-        $asusShortcut.TargetPath = $asusHelper
+        $asusShortcut.TargetPath = $asusUserLauncher
         $asusShortcut.Arguments = '--request ' + $asusMode.Name
-        $asusShortcut.WorkingDirectory = $asusSupportDir
+        $asusShortcut.WorkingDirectory = $asusUserApp
         $asusShortcut.Description = 'Enable ' + $asusMode.Name + ' mode quietly. ' + $asusMode.Hotkey
         # The resident helper owns these hotkeys; Explorer shortcut dispatch can lag.
         $asusShortcut.Hotkey = ''
